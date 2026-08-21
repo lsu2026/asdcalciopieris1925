@@ -1,0 +1,45 @@
+# =====================================================================
+#  Versionamento a LISTA BIANCA
+#
+#  Si parte escludendo tutto e si riammette solo il codice scritto per
+#  questo sito. E' una scelta di sicurezza: qualunque file nuovo che
+#  compaia nell'installazione (backup, dump del database, script
+#  temporanei, file di configurazione) resta fuori dal repository per
+#  impostazione predefinita, senza doversene ricordare ogni volta.
+#
+#  Restano quindi FUORI, fra le altre cose:
+#    - wp-config.php        credenziali del database
+#    - il core di WordPress e i plugin di terze parti (li aggiorna WP)
+#    - wp-content/uploads   immagini e allegati del sito
+#    - *.sql, cp-dump.php, cp-setup.php e simili
+# =====================================================================
+
+# tutto escluso
+/*
+
+# ...tranne questi
+!/.gitignore
+!/README.md
+
+!/wp-content/
+/wp-content/*
+
+!/wp-content/themes/
+/wp-content/themes/*
+!/wp-content/themes/calciopieris/
+
+!/wp-content/plugins/
+/wp-content/plugins/*
+!/wp-content/plugins/calciopieris-*.php
+
+# rete di sicurezza: anche dentro le cartelle riammesse, mai questi
+*.sql
+*.sql.gz
+*.zip
+*.log
+wp-config.php
+cp-dump.php
+cp-setup.php
+.env
+*.pem
+*.key

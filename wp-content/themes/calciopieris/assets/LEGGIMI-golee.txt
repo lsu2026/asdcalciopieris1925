@@ -1,0 +1,16 @@
+Logo Golee per i pulsanti di tesseramento (pagina Squadre).
+
+Copia qui il file con uno di questi nomi, in ordine di preferenza:
+
+    golee.svg     (migliore: nitido a ogni dimensione)
+    golee.webp
+    golee.png
+    golee.jpg
+
+Compare automaticamente dentro i due pulsanti "Nuovo tesseramento" e
+"Rinnovo tesseramento", dentro una pastiglia bianca di circa 1,45em.
+Finche' il file non c'e', i pulsanti restano solo testuali.
+
+Consigliato: versione quadrata o comunque compatta del marchio (il simbolo,
+non il logotipo esteso), altrimenti in uno spazio cosi' piccolo risulta
+illeggibile.

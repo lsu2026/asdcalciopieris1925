@@ -1,0 +1,16 @@
+Foto delle maglie della prima squadra mostrate nella pagina Store.
+
+Nomi dei file attesi (l'estensione puo' essere .webp, .jpg, .jpeg o .png):
+
+    prima.*      -> Prima maglia
+    seconda.*    -> Seconda maglia
+    portiere.*   -> Maglia portiere
+
+Basta copiare qui il file con il nome giusto: la pagina Store lo mostra
+automaticamente al posto del segnaposto, senza modifiche al codice.
+
+Di norma le foto si caricano dalla bacheca, voce di menu "Maglie": questa
+cartella resta come alternativa se il plugin non e' attivo.
+
+Le schede usano un ritaglio verticale 3:4, quindi sono consigliate immagini
+in formato verticale (es. 900x1200 px) con la maglia centrata.
