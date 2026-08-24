@@ -31,7 +31,7 @@
 		'.store-band__media',
 		'.store-band__text',
 		'.kit-grid .kit-card',
-		'.hero-badge',
+		'.hero-badge img',
 		'.hero-copy',
 		'.page-hero h1',
 		'.entry-content > *'

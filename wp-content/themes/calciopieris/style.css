@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.2.1
+Version: 1.2.2
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -162,13 +162,11 @@ a:hover { color: var(--oro); }
 
 /* ---------- Hero ---------- */
 .hero {
-  /* bianco a sinistra sotto lo scudetto, sottile diagonale oro, amaranto al centro e a destra */
+  /* Solo l'amaranto: la fascia bianca sotto lo scudetto e' disegnata dal logo
+     stesso (vedi .hero-badge::before piu' sotto). */
   background: linear-gradient(96deg,
-    var(--bianco) 0,
-    var(--bianco) clamp(250px, 28%, 420px),
-    var(--oro) clamp(250px, 28%, 420px),
-    var(--oro) calc(clamp(250px, 28%, 420px) + 5px),
-    var(--granata) calc(clamp(250px, 28%, 420px) + 5px),
+    var(--granata) 0,
+    var(--granata) clamp(250px, 28%, 420px),
     var(--granata-dark) 100%);
   color: var(--bianco);
   padding: 64px 0 72px;
@@ -176,8 +174,29 @@ a:hover { color: var(--oro); }
   overflow: hidden;
 }
 .hero .container { display: flex; align-items: center; gap: 56px; flex-wrap: wrap; }
-.hero-badge { margin-left: -26px; }
-.hero-badge img { height: 240px; width: auto; }
+.hero-badge { position: relative; display: flex; margin-left: -26px; }
+.hero-badge img { position: relative; z-index: 1; display: block; height: 240px; width: auto; }
+
+/* La fascia bianca e' ANCORATA AL LOGO, non allo sfondo della sezione.
+   Prima era un gradiente largo clamp(250px, 28%, 420px) misurato dal bordo dello
+   schermo, mentre il logo e' posizionato dal .container (max 1160px, centrato):
+   due geometrie indipendenti. Oltre i ~1500px il bianco si fermava al suo massimo
+   di 420px e il container continuava a spostarsi verso destra, cosi' lo scudetto
+   scivolava sull'amaranto (misurati 201px di sconfinamento a 1920px di larghezza).
+   Partendo invece dal bordo del logo il bianco lo contiene sempre, per costruzione,
+   a qualunque larghezza e con qualunque proporzione del logo. */
+.hero-badge::before {
+  content: "";
+  position: absolute;
+  left: -100vw;             /* fino al bordo sinistro dello schermo */
+  right: -52px;             /* respiro fra scudetto e diagonale */
+  top: -100vh;              /* l'hero ha overflow:hidden e taglia l'eccesso */
+  bottom: -100vh;
+  background: var(--bianco);
+  border-right: 5px solid var(--oro);
+  transform: skewX(-6deg);  /* la stessa inclinazione del gradiente di prima */
+  z-index: 0;
+}
 .hero-copy { flex: 1; min-width: 280px; padding-left: clamp(30px, 7vw, 110px); }
 .hero-copy .kicker {
   font-family: var(--font-display);
@@ -848,10 +867,12 @@ a:hover { color: var(--oro); }
   opacity: 1;
   transform: translateY(0);
 }
-/* l'hero entra subito al caricamento, con un movimento più ampio */
-.hero-badge.reveal { transform: translateY(0) translateX(-30px); }
+/* l'hero entra subito al caricamento, con un movimento più ampio.
+   Si anima l'immagine e non il suo contenitore: il pannello bianco e' agganciato
+   a .hero-badge, animare quel div farebbe scivolare anche lo sfondo. */
+.hero-badge img.reveal { transform: translateY(0) translateX(-30px); }
 .hero-copy.reveal { transform: translateY(0) translateX(30px); }
-.hero-badge.reveal.is-visible,
+.hero-badge img.reveal.is-visible,
 .hero-copy.reveal.is-visible { transform: translateX(0); }
 /* le card mantengono il sollevamento all'hover anche dopo l'animazione */
 .card.reveal.is-visible:hover { transform: translateY(-4px); }
@@ -1038,14 +1059,20 @@ a:hover { color: var(--oro); }
   .footer-top .container { grid-template-columns: 1fr; }
   .hero {
     padding: 56px 0 64px;
-    /* su mobile la divisione diventa orizzontale: bianco sopra, amaranto sotto */
-    background: linear-gradient(180deg,
-      var(--bianco) 0,
-      var(--bianco) 270px,
-      var(--oro) 270px,
-      var(--oro) 275px,
-      var(--granata) 275px,
-      var(--granata-dark) 100%);
+    background: linear-gradient(180deg, var(--granata), var(--granata-dark));
+  }
+  /* Su mobile la divisione diventa orizzontale: bianco sopra, amaranto sotto.
+     Il pannello resta agganciato al logo, quindi il bianco finisce sempre appena
+     sotto lo scudetto invece che a un'altezza fissa. */
+  .hero-badge { justify-content: center; }
+  .hero-badge::before {
+    left: -50vw;
+    right: -50vw;
+    top: -100vh;
+    bottom: -38px;
+    transform: none;
+    border-right: 0;
+    border-bottom: 5px solid var(--oro);
   }
   .cta-band { padding: 36px 28px; }
 }
