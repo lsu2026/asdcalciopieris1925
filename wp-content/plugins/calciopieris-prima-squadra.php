@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
- * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate).
- * Version: 1.1
+ * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
+ * Version: 1.2
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -10,7 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class CP_Prima_Squadra {
 
-	const DB_VER = '1.2';
+	const DB_VER = '1.3';
+
+	/* Competizioni gestite. Il valore finisce nella colonna `comp` di partite e
+	   classifiche: le righe create prima di questa versione restano 'campionato'
+	   grazie al valore predefinito della colonna. */
+	const CAMPIONATO = 'campionato';
+	const COPPA      = 'coppa';
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
@@ -50,6 +56,7 @@ class CP_Prima_Squadra {
 			season_id BIGINT UNSIGNED NOT NULL,
 			mdate DATETIME NULL,
 			competition VARCHAR(120) NOT NULL DEFAULT '',
+			comp VARCHAR(20) NOT NULL DEFAULT 'campionato',
 			home VARCHAR(120) NOT NULL DEFAULT '',
 			away VARCHAR(120) NOT NULL DEFAULT '',
 			home_goals INT NULL,
@@ -61,6 +68,7 @@ class CP_Prima_Squadra {
 		dbDelta( "CREATE TABLE $stand (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			season_id BIGINT UNSIGNED NOT NULL,
+			comp VARCHAR(20) NOT NULL DEFAULT 'campionato',
 			pos INT NOT NULL DEFAULT 0,
 			team VARCHAR(120) NOT NULL DEFAULT '',
 			pg INT NOT NULL DEFAULT 0,
@@ -106,13 +114,37 @@ class CP_Prima_Squadra {
 		}
 		return implode( ' · ', $parts );
 	}
-	public static function matches( $season_id ) {
+	public static function matches( $season_id, $comp = self::CAMPIONATO ) {
 		global $wpdb;
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'matches' ) . ' WHERE season_id=%d ORDER BY (mdate IS NULL), mdate ASC, id ASC', $season_id ) );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'matches' ) . ' WHERE season_id=%d AND comp=%s ORDER BY (mdate IS NULL), mdate ASC, id ASC', $season_id, $comp ) );
 	}
-	public static function standings( $season_id ) {
+	public static function standings( $season_id, $comp = self::CAMPIONATO ) {
 		global $wpdb;
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d ORDER BY pos ASC, pts DESC, (gf-gs) DESC, team ASC', $season_id ) );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d AND comp=%s ORDER BY pos ASC, pts DESC, (gf-gs) DESC, team ASC', $season_id, $comp ) );
+	}
+
+	/** Nome leggibile di una competizione. */
+	public static function comp_nome( $comp ) {
+		return ( self::COPPA === $comp ) ? 'Coppa Regione' : 'Campionato';
+	}
+
+	/** Solo i valori previsti: qualunque altra cosa vale campionato. */
+	public static function comp_valida( $comp ) {
+		return ( self::COPPA === $comp ) ? self::COPPA : self::CAMPIONATO;
+	}
+
+	/**
+	 * La stagione ha dati di coppa?
+	 *
+	 * Serve a non mostrare il selettore quando non c'e' niente da selezionare: una
+	 * stagione senza coppa deve restare identica a com'era prima.
+	 */
+	public static function has_coppa( $season_id ) {
+		global $wpdb;
+		$m = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::t( 'matches' ) . ' WHERE season_id=%d AND comp=%s', $season_id, self::COPPA ) );
+		if ( intval( $m ) > 0 ) { return true; }
+		$c = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d AND comp=%s', $season_id, self::COPPA ) );
+		return intval( $c ) > 0;
 	}
 
 	/* ============================ CSV ============================ */
@@ -163,10 +195,11 @@ class CP_Prima_Squadra {
 		return $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : null;
 	}
 
-	private static function import_matches_csv( $season, $tmp, $wipe ) {
+	private static function import_matches_csv( $season, $tmp, $wipe, $comp = self::CAMPIONATO ) {
 		global $wpdb;
 		$table = self::t( 'matches' );
-		if ( $wipe ) { $wpdb->delete( $table, array( 'season_id' => $season ) ); }
+		// lo svuotamento tocca solo la competizione in cui si sta importando
+		if ( $wipe ) { $wpdb->delete( $table, array( 'season_id' => $season, 'comp' => $comp ) ); }
 		$n = 0;
 		foreach ( self::read_csv( $tmp ) as $r ) {
 			$home = self::pick( $r, array( 'casa', 'squadracasa', 'home' ) );
@@ -176,6 +209,7 @@ class CP_Prima_Squadra {
 			$ag = self::pick( $r, array( 'golospite', 'goalospite', 'awaygoals', 'retiospite' ), '' );
 			$wpdb->insert( $table, array(
 				'season_id'   => $season,
+				'comp'        => $comp,
 				'mdate'       => self::parse_date( self::pick( $r, array( 'data', 'dataora', 'date', 'datetime' ) ) ),
 				'competition' => sanitize_text_field( self::pick( $r, array( 'competizione', 'campionato', 'torneo' ) ) ),
 				'home'        => sanitize_text_field( $home ),
@@ -188,10 +222,11 @@ class CP_Prima_Squadra {
 		return $n;
 	}
 
-	private static function import_standings_csv( $season, $tmp, $wipe ) {
+	private static function import_standings_csv( $season, $tmp, $wipe, $comp = self::CAMPIONATO ) {
 		global $wpdb;
 		$table = self::t( 'standings' );
-		if ( $wipe ) { $wpdb->delete( $table, array( 'season_id' => $season ) ); }
+		// lo svuotamento tocca solo la competizione in cui si sta importando
+		if ( $wipe ) { $wpdb->delete( $table, array( 'season_id' => $season, 'comp' => $comp ) ); }
 		$n = 0; $auto = 0;
 		foreach ( self::read_csv( $tmp ) as $r ) {
 			$team = self::pick( $r, array( 'squadra', 'team' ) );
@@ -201,6 +236,7 @@ class CP_Prima_Squadra {
 			$is_ours = ( in_array( strtolower( $ours ), array( '1', 'si', 'sì', 'x', 'true', 'yes' ), true ) || stripos( $team, 'pieris' ) !== false ) ? 1 : 0;
 			$wpdb->insert( $table, array(
 				'season_id' => $season,
+				'comp' => $comp,
 				'pos'  => intval( self::pick( $r, array( 'pos', 'posizione' ), $auto ) ),
 				'team' => sanitize_text_field( $team ),
 				'pg'   => intval( self::pick( $r, array( 'pg', 'giocate', 'partite' ), 0 ) ),
@@ -233,16 +269,36 @@ class CP_Prima_Squadra {
 	}
 	private static function notice( $m ) { echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $m ) . '</p></div>'; }
 
-	private static function season_picker( $current, $base_page ) {
+	private static function season_picker( $current, $base_page, $extra = array() ) {
 		$seasons = self::seasons();
 		if ( empty( $seasons ) ) { return; }
 		echo '<form method="get" style="margin:12px 0">';
 		echo '<input type="hidden" name="page" value="' . esc_attr( $base_page ) . '">';
+		// senza questi campi, cambiare stagione riporterebbe sempre al campionato
+		foreach ( $extra as $k => $v ) {
+			echo '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v ) . '">';
+		}
 		echo '<label style="font-weight:600">Stagione: </label><select name="s" onchange="this.form.submit()">';
 		foreach ( $seasons as $s ) {
 			echo '<option value="' . intval( $s->id ) . '"' . selected( $current, $s->id, false ) . '>' . esc_html( $s->label ) . ( $s->is_current ? ' (corrente)' : '' ) . '</option>';
 		}
 		echo '</select></form>';
+	}
+
+	/** Due schede, campionato e Coppa Regione, in cima alle pagine dei dati. */
+	private static function comp_picker( $comp, $base_page, $season ) {
+		echo '<h2 class="nav-tab-wrapper" style="margin:14px 0 18px">';
+		foreach ( array( self::CAMPIONATO, self::COPPA ) as $c ) {
+			$url = admin_url( 'admin.php?page=' . $base_page . '&s=' . intval( $season ) . '&c=' . $c );
+			echo '<a class="nav-tab' . ( $c === $comp ? ' nav-tab-active' : '' ) . '" href="' . esc_url( $url ) . '">'
+				. esc_html( self::comp_nome( $c ) ) . '</a>';
+		}
+		echo '</h2>';
+	}
+
+	/** Competizione scelta nelle schede, con ripiego sul campionato. */
+	private static function comp_richiesta() {
+		return self::comp_valida( isset( $_REQUEST['c'] ) ? sanitize_key( wp_unslash( $_REQUEST['c'] ) ) : self::CAMPIONATO );
 	}
 
 	/* ---------------------------- STAGIONI ---------------------------- */
@@ -358,10 +414,12 @@ class CP_Prima_Squadra {
 		global $wpdb;
 		$table = self::t( 'matches' );
 		$season = isset( $_REQUEST['s'] ) ? intval( $_REQUEST['s'] ) : self::current_season_id();
+		$comp = self::comp_richiesta();
 
 		if ( isset( $_POST['cpps_save_match'] ) && check_admin_referer( 'cpps_match' ) ) {
 			$data = array(
 				'season_id'   => $season,
+				'comp'        => $comp,
 				'mdate'       => '' !== $_POST['mdate'] ? gmdate( 'Y-m-d H:i:s', strtotime( sanitize_text_field( wp_unslash( $_POST['mdate'] ) ) ) ) : null,
 				'competition' => sanitize_text_field( wp_unslash( $_POST['competition'] ) ),
 				'home'        => sanitize_text_field( wp_unslash( $_POST['home'] ) ),
@@ -378,25 +436,26 @@ class CP_Prima_Squadra {
 			self::notice( 'Partita eliminata.' );
 		}
 		if ( isset( $_POST['cpps_import_matches'] ) && check_admin_referer( 'cpps_import_m' ) && ! empty( $_FILES['csv']['tmp_name'] ) ) {
-			$n = self::import_matches_csv( $season, $_FILES['csv']['tmp_name'], ! empty( $_POST['wipe'] ) );
+			$n = self::import_matches_csv( $season, $_FILES['csv']['tmp_name'], ! empty( $_POST['wipe'] ), $comp );
 			self::notice( "Importate {$n} partite dal file CSV." );
 		}
 
 		$edit = null;
 		if ( isset( $_GET['editmatch'] ) ) { $edit = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id=%d", intval( $_GET['editmatch'] ) ) ); }
-		$rows = $season ? self::matches( $season ) : array();
+		$rows = $season ? self::matches( $season, $comp ) : array();
 		?>
 		<div class="wrap">
 			<h1>Partite</h1>
 			<?php if ( ! self::seasons() ) : ?>
 				<div class="notice notice-warning"><p>Prima crea almeno una <a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_seasons' ) ); ?>">stagione</a>.</p></div>
 			<?php else : ?>
-			<?php self::season_picker( $season, 'cpps_matches' ); ?>
+			<?php self::season_picker( $season, 'cpps_matches', array( 'c' => $comp ) ); ?>
+			<?php self::comp_picker( $comp, 'cpps_matches', $season ); ?>
 			<p class="description">Lascia i gol vuoti per una partita <em>programmata</em>; compilali quando la partita è stata giocata.</p>
 			<table class="widefat striped">
 				<thead><tr><th>Data</th><th>Competizione</th><th>Casa</th><th>Ospite</th><th>Risultato</th><th>Azioni</th></tr></thead>
 				<tbody>
-				<?php if ( empty( $rows ) ) : ?><tr><td colspan="6">Nessuna partita per questa stagione.</td></tr>
+				<?php if ( empty( $rows ) ) : ?><tr><td colspan="6">Nessuna partita di <?php echo esc_html( self::comp_nome( $comp ) ); ?> per questa stagione.</td></tr>
 				<?php else : foreach ( $rows as $m ) : ?>
 					<tr>
 						<td><?php echo $m->mdate ? esc_html( date_i18n( 'j M Y H:i', strtotime( get_date_from_gmt( $m->mdate ) ) ) ) : '—'; ?></td>
@@ -405,8 +464,8 @@ class CP_Prima_Squadra {
 						<td><?php echo esc_html( $m->away ); ?></td>
 						<td><?php echo ( null !== $m->home_goals && null !== $m->away_goals ) ? intval( $m->home_goals ) . ' - ' . intval( $m->away_goals ) : '<em>da giocare</em>'; ?></td>
 						<td>
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&editmatch=' . $m->id ) ); ?>">Modifica</a> |
-							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&delmatch=' . $m->id ), 'cpps_delmatch' ) ); ?>" style="color:#b32d2e" onclick="return confirm('Eliminare la partita?')">Elimina</a>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp . '&editmatch=' . $m->id ) ); ?>">Modifica</a> |
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp . '&delmatch=' . $m->id ), 'cpps_delmatch' ) ); ?>" style="color:#b32d2e" onclick="return confirm('Eliminare la partita?')">Elimina</a>
 						</td>
 					</tr>
 				<?php endforeach; endif; ?>
@@ -416,6 +475,7 @@ class CP_Prima_Squadra {
 			<h2 style="margin-top:24px"><?php echo $edit ? 'Modifica partita' : 'Aggiungi partita'; ?></h2>
 			<form method="post">
 				<?php wp_nonce_field( 'cpps_match' ); ?>
+				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="hidden" name="edit_id" value="<?php echo $edit ? intval( $edit->id ) : 0; ?>">
 				<table class="form-table">
 					<tr><th><label>Data e ora</label></th><td><input type="datetime-local" name="mdate" value="<?php echo $edit && $edit->mdate ? esc_attr( date( 'Y-m-d\TH:i', strtotime( get_date_from_gmt( $edit->mdate ) ) ) ) : ''; ?>"></td></tr>
@@ -429,7 +489,7 @@ class CP_Prima_Squadra {
 					</td></tr>
 				</table>
 				<?php submit_button( $edit ? 'Salva modifiche' : 'Aggiungi partita', 'primary', 'cpps_save_match' ); ?>
-				<?php if ( $edit ) : ?><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season ) ); ?>">Annulla</a><?php endif; ?>
+				<?php if ( $edit ) : ?><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp ) ); ?>">Annulla</a><?php endif; ?>
 			</form>
 
 			<hr style="margin:28px 0">
@@ -437,6 +497,7 @@ class CP_Prima_Squadra {
 			<p class="description">Colonne accettate (con intestazione, separatore <code>,</code> o <code>;</code>): <code>data, competizione, casa, ospite, gol_casa, gol_ospite</code>. La <strong>data</strong> può essere <code>2025-09-14 15:30</code> o <code>14/09/2025 15:30</code>. Lascia i gol vuoti per le partite ancora da giocare.</p>
 			<form method="post" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'cpps_import_m' ); ?>
+				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="file" name="csv" accept=".csv,text/csv" required>
 				<label style="margin-left:10px"><input type="checkbox" name="wipe" value="1"> svuota prima le partite di questa stagione</label>
 				<?php submit_button( 'Importa CSV partite', 'secondary', 'cpps_import_matches', false ); ?>
@@ -452,10 +513,12 @@ class CP_Prima_Squadra {
 		global $wpdb;
 		$table = self::t( 'standings' );
 		$season = isset( $_REQUEST['s'] ) ? intval( $_REQUEST['s'] ) : self::current_season_id();
+		$comp = self::comp_richiesta();
 
 		if ( isset( $_POST['cpps_save_row'] ) && check_admin_referer( 'cpps_row' ) ) {
 			$data = array(
 				'season_id' => $season,
+				'comp' => $comp,
 				'pos'  => intval( $_POST['pos'] ),
 				'team' => sanitize_text_field( wp_unslash( $_POST['team'] ) ),
 				'pg'   => intval( $_POST['pg'] ),
@@ -476,25 +539,26 @@ class CP_Prima_Squadra {
 			self::notice( 'Riga eliminata.' );
 		}
 		if ( isset( $_POST['cpps_import_rows'] ) && check_admin_referer( 'cpps_import_s' ) && ! empty( $_FILES['csv']['tmp_name'] ) ) {
-			$n = self::import_standings_csv( $season, $_FILES['csv']['tmp_name'], ! empty( $_POST['wipe'] ) );
+			$n = self::import_standings_csv( $season, $_FILES['csv']['tmp_name'], ! empty( $_POST['wipe'] ), $comp );
 			self::notice( "Importate {$n} righe di classifica dal file CSV." );
 		}
 
 		$edit = null;
 		if ( isset( $_GET['editrow'] ) ) { $edit = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id=%d", intval( $_GET['editrow'] ) ) ); }
-		$rows = $season ? self::standings( $season ) : array();
+		$rows = $season ? self::standings( $season, $comp ) : array();
 		?>
 		<div class="wrap">
 			<h1>Classifica</h1>
 			<?php if ( ! self::seasons() ) : ?>
 				<div class="notice notice-warning"><p>Prima crea almeno una <a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_seasons' ) ); ?>">stagione</a>.</p></div>
 			<?php else : ?>
-			<?php self::season_picker( $season, 'cpps_standings' ); ?>
+			<?php self::season_picker( $season, 'cpps_standings', array( 'c' => $comp ) ); ?>
+			<?php self::comp_picker( $comp, 'cpps_standings', $season ); ?>
 			<p class="description">Spunta "Noi" sulla riga del Calcio Pieris per evidenziarla sul sito.</p>
 			<table class="widefat striped">
 				<thead><tr><th>Pos</th><th>Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>Pt</th><th>Noi</th><th>Azioni</th></tr></thead>
 				<tbody>
-				<?php if ( empty( $rows ) ) : ?><tr><td colspan="11">Nessuna riga per questa stagione.</td></tr>
+				<?php if ( empty( $rows ) ) : ?><tr><td colspan="11">Nessuna riga di <?php echo esc_html( self::comp_nome( $comp ) ); ?> per questa stagione.</td></tr>
 				<?php else : foreach ( $rows as $r ) : ?>
 					<tr>
 						<td><?php echo intval( $r->pos ); ?></td><td><strong><?php echo esc_html( $r->team ); ?></strong></td>
@@ -502,8 +566,8 @@ class CP_Prima_Squadra {
 						<td><?php echo intval( $r->gf ); ?></td><td><?php echo intval( $r->gs ); ?></td><td><strong><?php echo intval( $r->pts ); ?></strong></td>
 						<td><?php echo $r->ours ? '⭐' : ''; ?></td>
 						<td>
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_standings&s=' . $season . '&editrow=' . $r->id ) ); ?>">Modifica</a> |
-							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_standings&s=' . $season . '&delrow=' . $r->id ), 'cpps_delrow' ) ); ?>" style="color:#b32d2e" onclick="return confirm('Eliminare la riga?')">Elimina</a>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_standings&s=' . $season . '&c=' . $comp . '&editrow=' . $r->id ) ); ?>">Modifica</a> |
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_standings&s=' . $season . '&c=' . $comp . '&delrow=' . $r->id ), 'cpps_delrow' ) ); ?>" style="color:#b32d2e" onclick="return confirm('Eliminare la riga?')">Elimina</a>
 						</td>
 					</tr>
 				<?php endforeach; endif; ?>
@@ -513,6 +577,7 @@ class CP_Prima_Squadra {
 			<h2 style="margin-top:24px"><?php echo $edit ? 'Modifica riga' : 'Aggiungi riga'; ?></h2>
 			<form method="post">
 				<?php wp_nonce_field( 'cpps_row' ); ?>
+				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="hidden" name="edit_id" value="<?php echo $edit ? intval( $edit->id ) : 0; ?>">
 				<table class="form-table">
 					<tr><th><label>Posizione</label></th><td><input type="number" name="pos" value="<?php echo $edit ? intval( $edit->pos ) : count( $rows ) + 1; ?>" class="small-text"></td></tr>
@@ -539,6 +604,7 @@ class CP_Prima_Squadra {
 			<p class="description">Colonne accettate (con intestazione, separatore <code>,</code> o <code>;</code>): <code>pos, squadra, pg, v, n, p, gf, gs, punti, noi</code>. La colonna <code>noi</code> (valori <code>si</code>/<code>1</code>) evidenzia la riga del Pieris; se manca, viene evidenziata automaticamente la squadra che contiene "Pieris". Se <code>pos</code> manca, viene usato l'ordine delle righe.</p>
 			<form method="post" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'cpps_import_s' ); ?>
+				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="file" name="csv" accept=".csv,text/csv" required>
 				<label style="margin-left:10px"><input type="checkbox" name="wipe" value="1" checked> svuota prima la classifica di questa stagione</label>
 				<?php submit_button( 'Importa CSV classifica', 'secondary', 'cpps_import_rows', false ); ?>
@@ -569,6 +635,13 @@ class CP_Prima_Squadra {
 		.cp-slides-viewport{overflow:hidden;transition:height .35s ease}
 		.cp-slides-track{display:flex;align-items:flex-start;will-change:transform}
 		.cp-slide{flex:0 0 100%;width:100%;box-sizing:border-box}
+		.cp-comp{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:0 0 24px}
+		.cp-comp__btn{display:inline-flex;align-items:center;gap:9px;padding:9px 20px;border:2px solid var(--g);background:#fff;color:var(--g);border-radius:999px;cursor:pointer;font-family:var(--font-display,inherit);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.95rem;line-height:1;transition:background .15s,color .15s}
+		.cp-comp__btn:hover:not(.is-on){background:#f7efe9}
+		.cp-comp__btn.is-on{background:var(--g);color:#fff}
+		.cp-comp__btn.is-on .cp-comp__ico{fill:var(--o)}
+		.cp-comp__ico{width:21px;height:21px;fill:currentColor;flex:0 0 auto}
+		@media(max-width:420px){.cp-comp__btn{padding:8px 14px;font-size:.82rem;gap:7px}.cp-comp__ico{width:18px;height:18px}}
 		.cp-ps h3{color:var(--g);border-bottom:2px solid var(--o);padding-bottom:6px;margin:0 0 14px}
 		.cp-slide h3:not(:first-child){margin-top:28px}
 		.cp-table{width:100%;border-collapse:collapse;font-size:.95rem;overflow:hidden;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.08)}
@@ -707,6 +780,29 @@ class CP_Prima_Squadra {
 			posiziona(true);
 		}
 
+		/* Passaggio fra campionato e coppa. L'ascoltatore sta sul contenitore e non sui
+		   singoli pulsanti, cosi' funziona anche nelle stagioni caricate dopo via AJAX,
+		   che quando questo codice gira non esistono ancora. */
+		root.addEventListener('click', function (e) {
+			var btn = (e.target && e.target.closest) ? e.target.closest('.cp-comp__btn') : null;
+			if (!btn) { return; }
+			var slide = btn.closest('.cp-slide') || root;
+			var scelta = btn.getAttribute('data-cp-target');
+			var bottoni = slide.querySelectorAll('.cp-comp__btn');
+			for (var i = 0; i < bottoni.length; i++) {
+				var acceso = bottoni[i] === btn;
+				if (acceso) { bottoni[i].classList.add('is-on'); } else { bottoni[i].classList.remove('is-on'); }
+				bottoni[i].setAttribute('aria-selected', acceso ? 'true' : 'false');
+			}
+			var pannelli = slide.querySelectorAll('[data-cp-pane]');
+			for (var j = 0; j < pannelli.length; j++) {
+				pannelli[j].hidden = (pannelli[j].getAttribute('data-cp-pane') !== scelta);
+			}
+			/* I due pannelli hanno altezze diverse: il viewport ha altezza fissa in pixel
+			   e senza questa chiamata il contenuto piu' alto resterebbe tagliato. */
+			altezza();
+		});
+
 		if (left) { left.addEventListener('click', function () { vai(idx - 1); }); }
 		if (right) { right.addEventListener('click', function () { vai(idx + 1); }); }
 		window.addEventListener('resize', function () { posiziona(false); });
@@ -728,10 +824,61 @@ JS;
 		return '<script>' . $js . '</script>';
 	}
 
-	public static function render_classifica( $season_id ) {
-		$rows = self::standings( $season_id );
-		if ( empty( $rows ) ) { return '<p class="cp-empty">Classifica non ancora disponibile per questa stagione.</p>'; }
-		$h  = '<h3>Classifica</h3><div style="overflow-x:auto"><table class="cp-table"><thead><tr>';
+	/**
+	 * Contenuto di una stagione: foto, campionato ed eventuale Coppa Regione.
+	 *
+	 * Il selettore compare SOLO se la stagione ha davvero dati di coppa. Una stagione
+	 * che la coppa non l'ha giocata resta identica a prima, senza una scheda vuota.
+	 */
+	public static function render_season_body( $s ) {
+		$out = self::render_photo( $s );
+
+		if ( ! self::has_coppa( $s->id ) ) {
+			return $out . self::render_classifica( $s->id ) . self::render_calendario( $s->id );
+		}
+
+		$comps = array( self::CAMPIONATO, self::COPPA );
+
+		$out .= '<div class="cp-comp" role="tablist" aria-label="Competizione">';
+		foreach ( $comps as $i => $c ) {
+			$attivo = ( 0 === $i );
+			$out .= '<button type="button" class="cp-comp__btn' . ( $attivo ? ' is-on' : '' ) . '"'
+				. ' role="tab" aria-selected="' . ( $attivo ? 'true' : 'false' ) . '"'
+				. ' data-cp-target="' . esc_attr( $c ) . '">'
+				. self::comp_icona( $c )
+				. '<span>' . esc_html( self::comp_nome( $c ) ) . '</span></button>';
+		}
+		$out .= '</div>';
+
+		foreach ( $comps as $i => $c ) {
+			$out .= '<div class="cp-comp__pane" data-cp-pane="' . esc_attr( $c ) . '"' . ( 0 === $i ? '' : ' hidden' ) . '>';
+			/* Nella coppa la classifica si mostra solo se esiste davvero: molte coppe
+			   si giocano a eliminazione diretta, e una tabella vuota farebbe pensare a
+			   dati mancanti invece che a una competizione senza girone. */
+			if ( self::CAMPIONATO === $c || self::standings( $s->id, $c ) ) {
+				$out .= self::render_classifica( $s->id, $c );
+			}
+			$out .= self::render_calendario( $s->id, $c );
+			$out .= '</div>';
+		}
+		return $out;
+	}
+
+	/** Icona della competizione: scudetto per il campionato, coppa per la Coppa Regione. */
+	private static function comp_icona( $comp ) {
+		if ( self::COPPA === $comp ) {
+			return '<svg class="cp-comp__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+				. '<path d="M6 3h12v1h3a1 1 0 0 1 1 1v2a5 5 0 0 1-4.6 5 6 6 0 0 1-4.4 3.9V18h3.5a1 1 0 0 1 1 1v2H7v-2a1 1 0 0 1 1-1h3.5v-2.1A6 6 0 0 1 7.6 12 5 5 0 0 1 3 7V5a1 1 0 0 1 1-1h2V3zM6 6H5v1a3 3 0 0 0 1 2.2V6zm13 0h-1v3.2A3 3 0 0 0 19 7V6z"/></svg>';
+		}
+		return '<svg class="cp-comp__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+			. '<path d="M12 2 4 4.8v6.4c0 4.9 3.3 9.2 8 10.8 4.7-1.6 8-5.9 8-10.8V4.8L12 2zm0 2.1 6 2.1v5c0 3.9-2.4 7.3-6 8.7-3.6-1.4-6-4.8-6-8.7v-5l6-2.1z"/></svg>';
+	}
+
+	public static function render_classifica( $season_id, $comp = self::CAMPIONATO ) {
+		$rows = self::standings( $season_id, $comp );
+		if ( empty( $rows ) ) { return '<p class="cp-empty">Classifica non ancora disponibile.</p>'; }
+		$titolo = ( self::COPPA === $comp ) ? 'Classifica del girone' : 'Classifica';
+		$h  = '<h3>' . esc_html( $titolo ) . '</h3><div style="overflow-x:auto"><table class="cp-table"><thead><tr>';
 		$h .= '<th>#</th><th style="text-align:left">Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			$dr = intval( $r->gf ) - intval( $r->gs );
@@ -744,9 +891,9 @@ JS;
 		return $h;
 	}
 
-	public static function render_calendario( $season_id ) {
-		$rows = self::matches( $season_id );
-		if ( empty( $rows ) ) { return '<p class="cp-empty">Nessuna partita inserita per questa stagione.</p>'; }
+	public static function render_calendario( $season_id, $comp = self::CAMPIONATO ) {
+		$rows = self::matches( $season_id, $comp );
+		if ( empty( $rows ) ) { return '<p class="cp-empty">Nessuna partita inserita.</p>'; }
 		$played = array(); $todo = array();
 		foreach ( $rows as $m ) {
 			if ( null !== $m->home_goals && null !== $m->away_goals ) { $played[] = $m; } else { $todo[] = $m; }
@@ -796,7 +943,7 @@ JS;
 		}
 
 		wp_send_json_success( array(
-			'html'  => self::render_photo( $s ) . self::render_classifica( $s->id ) . self::render_calendario( $s->id ),
+			'html'  => self::render_season_body( $s ),
 			'label' => $s->label,
 			'meta'  => self::season_meta( $s ),
 		) );
@@ -837,9 +984,7 @@ JS;
 				. ' data-cp-id="' . intval( $s->id ) . '"'
 				. ( $attiva ? ' data-cp-loaded="1"' : '' ) . '>';
 			if ( $attiva ) {
-				$out .= self::render_photo( $s );
-				$out .= self::render_classifica( $s->id );
-				$out .= self::render_calendario( $s->id );
+				$out .= self::render_season_body( $s );
 			} else {
 				$out .= '<div class="cp-loading"><span class="cp-spinner" aria-hidden="true"></span>Caricamento della stagione&hellip;</div>';
 			}
