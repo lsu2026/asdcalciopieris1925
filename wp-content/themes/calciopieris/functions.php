@@ -86,30 +86,70 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 
 
 /**
- * Dati dello store ufficiale del club.
+ * Gli store ufficiali del club.
  *
- * Lo store e' gestito da EYE Sports, che e' anche sponsor del club. Le due cose pero'
- * puntano ad indirizzi diversi e vanno tenute distinte:
- *  - la voce sponsor rimanda alla home dello shop (pagina Sponsors);
- *  - qui serve la pagina dedicata al kit granata, quella che interessa al tifoso.
- * Per questo l'indirizzo NON viene ereditato dallo sponsor, mentre lo stemma si:
- * cosi' il marchio resta allineato ovunque aggiornandolo in un punto solo.
+ * Sono due e stanno sullo stesso piano: EYE Sports e Maglie4you Teamstore.
+ * L'ordine di questo elenco e' quello con cui compaiono sul sito.
+ *
+ * Ogni store porta due indirizzi distinti, e la differenza conta:
+ *  - 'site' e' la home dello shop, dove si vede tutto il catalogo;
+ *  - 'url'  e' la sezione dedicata al Calcio Pieris, cioe' quella che interessa
+ *           davvero al tifoso, ed e' l'indirizzo dei pulsanti principali.
+ * Per lo stesso motivo l'indirizzo NON viene mai ereditato dalla voce sponsor,
+ * che rimanda alla home dello shop; il logo si', cosi' il marchio resta
+ * allineato ovunque aggiornandolo in un punto solo.
+ *
+ * 'logo' puo' essere vuoto: in quel caso i template mostrano il nome scritto,
+ * e l'immagine compare da sola appena lo store viene aggiunto fra gli sponsor
+ * con il proprio logo (l'abbinamento avviene sul frammento in 'cerca').
  */
-function cp_store_info() {
-	$store = array(
-		'name' => 'EYE Sports',
-		'url'  => 'https://www.eyesportshop.com/it/450-asd-calcio-pieris-1925',
-		'logo' => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
+function cp_stores() {
+	$stores = array(
+		array(
+			'name'  => 'EYE Sports',
+			'url'   => 'https://www.eyesportshop.com/it/450-asd-calcio-pieris-1925',
+			'site'  => 'https://www.eyesportshop.com/it/',
+			'logo'  => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
+			'cerca' => 'eye',
+			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano in campo, in panchina e in trasferta.',
+			'prov'  => false,
+		),
+		array(
+			'name'  => 'Maglie4you Teamstore',
+			'url'   => 'https://maglie4team.it/calcio/pieris-calcio/',
+			'site'  => 'https://maglie4team.it',
+			'logo'  => '',
+			'cerca' => 'maglie4',
+			'desc'  => 'Teamstore ufficiale del club. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925, con le divise e l&rsquo;abbigliamento della societ&agrave;.',
+			'prov'  => true,
+		),
 	);
+
+	/* Se lo store e' anche sponsor, il logo caricato dal pannello Sponsor ha la
+	   precedenza su quello del tema: cosi' basta aggiornarlo in un posto solo.
+	   Vale anche per gli store che qui non hanno ancora un logo. */
 	if ( function_exists( 'cp_get_sponsors' ) ) {
-		foreach ( cp_get_sponsors() as $sp ) {
-			if ( ! empty( $sp['name'] ) && stripos( $sp['name'], 'eye' ) !== false ) {
-				if ( ! empty( $sp['logo'] ) ) { $store['logo'] = $sp['logo']; }
-				break;
+		$sponsor = cp_get_sponsors();
+		foreach ( $stores as $i => $s ) {
+			foreach ( $sponsor as $sp ) {
+				if ( ! empty( $sp['name'] ) && ! empty( $sp['logo'] )
+					&& stripos( $sp['name'], $s['cerca'] ) !== false ) {
+					$stores[ $i ]['logo'] = $sp['logo'];
+					break;
+				}
 			}
 		}
 	}
-	return $store;
+	return $stores;
+}
+
+/**
+ * Il primo store, per i punti del tema che ne mostrano uno solo.
+ * Resta per compatibilita': cp_stores() e' la fonte completa.
+ */
+function cp_store_info() {
+	$stores = cp_stores();
+	return $stores[0];
 }
 
 /**

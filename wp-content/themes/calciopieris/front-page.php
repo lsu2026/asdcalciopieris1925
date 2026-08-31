@@ -272,23 +272,37 @@ get_header();
 	</div>
 </section>
 
-<?php /* Store ufficiale: richiamo alla pagina Store. Lo store e' gestito da EYE Sports,
-   lo stesso partner presente tra gli sponsor, quindi mostra il medesimo stemma. */ ?>
-<?php $cp_store = function_exists( 'cp_store_info' ) ? cp_store_info() : array(); ?>
-<?php if ( ! empty( $cp_store ) ) : ?>
+<?php /* Store ufficiali: richiamo alla pagina Store. Sono due e stanno sullo stesso
+   piano, quindi la fascia mostra una scheda per ciascuno invece di dare risalto
+   a uno solo. L'elenco arriva da cp_stores() in functions.php. */ ?>
+<?php $cp_stores = function_exists( 'cp_stores' ) ? cp_stores() : array(); ?>
+<?php if ( ! empty( $cp_stores ) ) :
+	$cp_nomi = wp_list_pluck( $cp_stores, 'name' );
+	$cp_ultimo = array_pop( $cp_nomi );
+	$cp_elenco = $cp_nomi ? implode( ', ', $cp_nomi ) . ' e ' . $cp_ultimo : $cp_ultimo;
+	$cp_uno = ( 1 === count( $cp_stores ) );
+	?>
 <section class="store-band">
 	<div class="container">
 		<div class="store-band__inner">
 			<div class="store-band__media">
-				<span class="store-band__seal">Store<br>ufficiale</span>
-				<div class="store-band__card">
-					<img src="<?php echo esc_url( $cp_store['logo'] ); ?>" alt="<?php echo esc_attr( $cp_store['name'] ); ?> &mdash; store ufficiale del Calcio Pieris 1925" loading="lazy">
+				<span class="store-band__seal">Store<br><?php echo $cp_uno ? 'ufficiale' : 'ufficiali'; ?></span>
+				<div class="store-band__cards<?php echo $cp_uno ? '' : ' store-band__cards--multi'; ?>">
+					<?php foreach ( $cp_stores as $cp_s ) : ?>
+						<a class="store-band__card" href="<?php echo esc_url( $cp_s['url'] ); ?>" target="_blank" rel="noopener">
+							<?php if ( ! empty( $cp_s['logo'] ) ) : ?>
+								<img src="<?php echo esc_url( $cp_s['logo'] ); ?>" alt="<?php echo esc_attr( $cp_s['name'] ); ?> &mdash; store ufficiale del Calcio Pieris 1925" loading="lazy">
+							<?php else : ?>
+								<span class="store-band__word"><?php echo esc_html( $cp_s['name'] ); ?></span>
+							<?php endif; ?>
+						</a>
+					<?php endforeach; ?>
 				</div>
 			</div>
 			<div class="store-band__text">
-				<div class="store-band__over"><?php echo esc_html( $cp_store['name'] ); ?></div>
+				<div class="store-band__over"><?php echo esc_html( $cp_elenco ); ?></div>
 				<h2>Indossa i colori <span>granata</span></h2>
-				<p>Divise da gara, abbigliamento da allenamento e merchandising del club: lo store ufficiale dell&rsquo;A.S.D. Calcio Pieris 1925 &egrave; <?php echo esc_html( $cp_store['name'] ); ?>, che &egrave; anche nostro sponsor. Ogni acquisto sostiene direttamente l&rsquo;attivit&agrave; granata.</p>
+				<p>Divise da gara, abbigliamento da allenamento e merchandising del club: <?php echo $cp_uno ? 'lo store ufficiale' : 'gli store ufficiali'; ?> dell&rsquo;A.S.D. Calcio Pieris 1925 <?php echo $cp_uno ? '&egrave;' : 'sono'; ?> <?php echo esc_html( $cp_elenco ); ?>. Ogni acquisto sostiene direttamente l&rsquo;attivit&agrave; granata.</p>
 				<ul class="store-band__tags">
 					<li>Divise da gara</li>
 					<li>Allenamento</li>
@@ -296,7 +310,11 @@ get_header();
 				</ul>
 				<div class="store-band__actions">
 					<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/store/' ) ); ?>">Scopri lo Store</a>
-					<a class="btn btn-ghost" href="<?php echo esc_url( $cp_store['url'] ); ?>" target="_blank" rel="noopener">Vai al kit granata</a>
+					<?php foreach ( $cp_stores as $cp_s ) : ?>
+						<a class="btn btn-ghost" href="<?php echo esc_url( $cp_s['url'] ); ?>" target="_blank" rel="noopener"><?php
+							echo esc_html( $cp_uno ? 'Vai al kit granata' : $cp_s['name'] );
+						?></a>
+					<?php endforeach; ?>
 				</div>
 			</div>
 		</div>

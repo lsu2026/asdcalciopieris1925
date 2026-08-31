@@ -1,12 +1,14 @@
 <?php
 /**
- * Template della pagina "Store" — lo store ufficiale dell'A.S.D. Calcio Pieris 1925.
+ * Template della pagina "Store" — gli store ufficiali dell'A.S.D. Calcio Pieris 1925.
  *
- * Lo store e' gestito da EYE Sports, che e' anche sponsor del club: per questo motivo
- * il marchio mostrato qui e' lo stesso stemma usato nella pagina Sponsors e nel
- * carosello della home (assets/sponsors/eyestore.jpg). Logo e indirizzo arrivano da
- * cp_store_info() in functions.php, cosi' un aggiornamento fatto in un punto solo si
- * riflette su tutte le pagine che citano lo store.
+ * Gli store sono due e stanno sullo stesso piano: EYE Sports e Maglie4you Teamstore.
+ * Nomi, indirizzi e loghi arrivano da cp_stores() in functions.php, cosi' un
+ * aggiornamento fatto in un punto solo si riflette su tutte le pagine che li citano;
+ * per aggiungerne un terzo basta una voce in quell'elenco, senza toccare questo file.
+ *
+ * Uno store che non ha ancora un logo mostra il proprio nome scritto: la scheda resta
+ * completa, e l'immagine compare da sola appena il logo e' disponibile.
  *
  * I paragrafi contrassegnati dal badge "Testo provvisorio" contengono descrizioni di
  * servizio non ancora confermate dal club, seguendo la stessa convenzione adottata in
@@ -15,10 +17,15 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 get_header();
 
-$store = function_exists( 'cp_store_info' ) ? cp_store_info() : array(
-	'name' => 'EYE Sports',
-	'url'  => 'https://www.eyesportshop.com/it/',
-	'logo' => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
+$stores = function_exists( 'cp_stores' ) ? cp_stores() : array(
+	array(
+		'name' => 'EYE Sports',
+		'url'  => 'https://www.eyesportshop.com/it/',
+		'site' => 'https://www.eyesportshop.com/it/',
+		'logo' => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
+		'desc' => '',
+		'prov' => false,
+	),
 );
 
 /* Maglie della prima squadra. Le foto arrivano dal plugin "Calcio Pieris - Maglie"
@@ -48,6 +55,13 @@ $kit_meta = array(
 .store-hero__text{flex:1 1 320px}
 .store-hero__text h2{color:var(--g);font-size:2rem;margin:0 0 14px;padding-top:0}
 .store-lead{color:#444;line-height:1.75;margin:0 0 16px;font-size:1.05rem}
+.store-intro{color:#444;line-height:1.75;font-size:1.05rem;margin:0 0 34px;max-width:70ch}
+/* store senza logo: il nome scritto tiene il posto dell'immagine, cosi' la
+   scheda non resta vuota e le due presentazioni restano equilibrate */
+.store-word{font-family:var(--font-display,inherit);font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.12;font-size:1.5rem;color:var(--g);text-align:center;display:block;max-width:220px}
+.store-hero__actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.store-site{color:var(--g);font-weight:600;font-size:.95rem;text-decoration:underline;text-underline-offset:3px}
+.store-site:hover{color:var(--granata-dark,#6e120e)}
 .store-prov{display:inline-block;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;color:#9a7b1f;background:#faf3e2;border:1px solid #ecdfbe;padding:3px 9px;border-radius:5px;margin-bottom:14px}
 .store-page h2{color:var(--g)}
 .store-kit__head{text-align:center;max-width:640px;margin:0 auto}
@@ -87,27 +101,45 @@ $kit_meta = array(
 <div class="page-hero">
 	<div class="container">
 		<div class="breadcrumb"><a style="color:var(--oro)" href="<?php echo esc_url( home_url( '/' ) ); ?>">Home</a> &rsaquo; Store</div>
-		<h1>Store Ufficiale</h1>
+		<h1>Store Uffici<?php echo count( $stores ) > 1 ? 'ali' : 'ale'; ?></h1>
 	</div>
 </div>
 
 <div class="entry-content">
 	<div class="container store-page">
 
-		<?php /* Presentazione dello store ufficiale. Il logo e' lo stesso dello sponsor
-		   EYE Sports, perche' store e sponsor sono la stessa realta'. */ ?>
-		<section class="store-hero">
-			<div class="store-hero__logo">
-				<a href="<?php echo esc_url( $store['url'] ); ?>" target="_blank" rel="noopener">
-					<img src="<?php echo esc_url( $store['logo'] ); ?>" alt="<?php echo esc_attr( $store['name'] ); ?> &mdash; store ufficiale del Calcio Pieris 1925">
-				</a>
-			</div>
-			<div class="store-hero__text">
-				<h2><?php echo esc_html( $store['name'] ); ?></h2>
-				<p class="store-lead"><?php echo esc_html( $store['name'] ); ?> &egrave; lo store ufficiale dell&rsquo;A.S.D. Calcio Pieris 1925. &Egrave; il punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano in campo, in panchina e in trasferta.</p>
-				<a class="btn btn-granata" href="<?php echo esc_url( $store['url'] ); ?>" target="_blank" rel="noopener">Vai al kit granata &rarr;</a>
-			</div>
-		</section>
+		<?php /* Gli store ufficiali, uno per blocco e tutti con lo stesso trattamento:
+		   nessuno dei due e' presentato come principale. Il pulsante porta alla
+		   sezione dedicata al Pieris, non alla home dello shop: e' quella che
+		   interessa a chi arriva da qui. */ ?>
+		<?php if ( count( $stores ) > 1 ) : ?>
+			<p class="store-intro">L&rsquo;A.S.D. Calcio Pieris 1925 ha <strong><?php echo count( $stores ); ?> store ufficiali</strong>. In entrambi trovi una sezione dedicata al club, con le divise e l&rsquo;abbigliamento granata.</p>
+		<?php endif; ?>
+
+		<?php foreach ( $stores as $s ) : ?>
+			<section class="store-hero">
+				<div class="store-hero__logo">
+					<a href="<?php echo esc_url( $s['url'] ); ?>" target="_blank" rel="noopener">
+						<?php if ( ! empty( $s['logo'] ) ) : ?>
+							<img src="<?php echo esc_url( $s['logo'] ); ?>" alt="<?php echo esc_attr( $s['name'] ); ?> &mdash; store ufficiale del Calcio Pieris 1925">
+						<?php else : ?>
+							<span class="store-word"><?php echo esc_html( $s['name'] ); ?></span>
+						<?php endif; ?>
+					</a>
+				</div>
+				<div class="store-hero__text">
+					<?php if ( ! empty( $s['prov'] ) ) : ?><span class="store-prov">Testo provvisorio</span><?php endif; ?>
+					<h2><?php echo esc_html( $s['name'] ); ?></h2>
+					<p class="store-lead"><?php echo wp_kses_post( $s['desc'] ); ?></p>
+					<div class="store-hero__actions">
+						<a class="btn btn-granata" href="<?php echo esc_url( $s['url'] ); ?>" target="_blank" rel="noopener">Vai ai capi granata &rarr;</a>
+						<?php if ( ! empty( $s['site'] ) && $s['site'] !== $s['url'] ) : ?>
+							<a class="store-site" href="<?php echo esc_url( $s['site'] ); ?>" target="_blank" rel="noopener">Sito ufficiale</a>
+						<?php endif; ?>
+					</div>
+				</div>
+			</section>
+		<?php endforeach; ?>
 
 		<?php /* Da qui in avanti i contenuti sono descrittivi e non ancora confermati dal
 		   club: restano marcati come provvisori finche' non arrivano i testi ufficiali. */ ?>
@@ -152,8 +184,12 @@ $kit_meta = array(
 			<span class="store-prov">Testo provvisorio</span>
 			<h2>Come acquistare</h2>
 			<ol class="store-steps">
-				<li>Visita lo shop online di <?php echo esc_html( $store['name'] ); ?> e scegli i capi ufficiali del Calcio Pieris 1925.</li>
-				<li>Segnala di essere tesserato o genitore di un tesserato del club: lo store riserva condizioni dedicate alle nostre squadre.</li>
+				<li>Apri la sezione dedicata al Calcio Pieris 1925 su <?php
+					$nomi = wp_list_pluck( $stores, 'name' );
+					$ultimo = array_pop( $nomi );
+					echo esc_html( $nomi ? implode( ', ', $nomi ) . ' o ' . $ultimo : $ultimo );
+				?> e scegli i capi ufficiali.</li>
+				<li>Segnala di essere tesserato o genitore di un tesserato del club: gli store riservano condizioni dedicate alle nostre squadre.</li>
 				<li>Per ordini di gruppo, personalizzazioni con numero e nome o forniture per le squadre, contatta la segreteria del club.</li>
 			</ol>
 		</section>
