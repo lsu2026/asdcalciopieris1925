@@ -19,7 +19,7 @@
 				<h4>Contatti</h4>
 				<ul>
 					<li>Via Anna Frank 3<br>Pieris &mdash; San Canzian d&rsquo;Isonzo (GO)</li>
-					<li>Tel. <a href="tel:+393515021700">351 502 1700</a></li>
+					<li>Tel. <a href="tel:+393346684760">+39 334 6684760</a></li>
 					<li><a href="mailto:asdcalciopieris1925@gmail.com">asdcalciopieris1925@gmail.com</a></li>
 				</ul>
 			</div>
