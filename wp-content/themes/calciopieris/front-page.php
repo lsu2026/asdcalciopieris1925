@@ -308,13 +308,11 @@ get_header();
 					<li>Allenamento</li>
 					<li>Merchandising</li>
 				</ul>
+				<?php /* Un solo pulsante, verso la pagina Store. I collegamenti diretti ai
+				   due shop non spariscono: le schede con i loghi qui accanto sono
+				   gia' cliccabili e portano ciascuna alla propria sezione granata. */ ?>
 				<div class="store-band__actions">
 					<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/store/' ) ); ?>">Scopri lo Store</a>
-					<?php foreach ( $cp_stores as $cp_s ) : ?>
-						<a class="btn btn-ghost" href="<?php echo esc_url( $cp_s['url'] ); ?>" target="_blank" rel="noopener"><?php
-							echo esc_html( $cp_uno ? 'Vai al kit granata' : $cp_s['name'] );
-						?></a>
-					<?php endforeach; ?>
 				</div>
 			</div>
 		</div>

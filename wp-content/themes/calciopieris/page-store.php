@@ -2,7 +2,7 @@
 /**
  * Template della pagina "Store" — gli store ufficiali dell'A.S.D. Calcio Pieris 1925.
  *
- * Gli store sono due e stanno sullo stesso piano: EYE Sports e Maglie4you Teamstore.
+ * Gli store sono due e stanno sullo stesso piano: EYE Sports e Maglie4team.
  * Nomi, indirizzi e loghi arrivano da cp_stores() in functions.php, cosi' un
  * aggiornamento fatto in un punto solo si riflette su tutte le pagine che li citano;
  * per aggiungerne un terzo basta una voce in quell'elenco, senza toccare questo file.

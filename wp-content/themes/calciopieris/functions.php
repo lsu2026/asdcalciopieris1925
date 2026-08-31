@@ -88,7 +88,7 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 /**
  * Gli store ufficiali del club.
  *
- * Sono due e stanno sullo stesso piano: EYE Sports e Maglie4you Teamstore.
+ * Sono due e stanno sullo stesso piano: EYE Sports e Maglie4team.
  * L'ordine di questo elenco e' quello con cui compaiono sul sito.
  *
  * Ogni store porta due indirizzi distinti, e la differenza conta:
@@ -115,10 +115,10 @@ function cp_stores() {
 			'prov'  => false,
 		),
 		array(
-			'name'  => 'Maglie4you Teamstore',
+			'name'  => 'Maglie4team',
 			'url'   => 'https://maglie4team.it/calcio/pieris-calcio/',
 			'site'  => 'https://maglie4team.it',
-			'logo'  => '',
+			'logo'  => get_template_directory_uri() . '/assets/sponsors/maglie4team.png',
 			'cerca' => 'maglie4',
 			'desc'  => 'Teamstore ufficiale del club. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925, con le divise e l&rsquo;abbigliamento della societ&agrave;.',
 			'prov'  => true,
