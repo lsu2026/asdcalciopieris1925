@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
  * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
- * Version: 1.2
+ * Version: 1.3
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -664,7 +664,20 @@ class CP_Prima_Squadra {
 		@keyframes cp-spin{to{transform:rotate(360deg)}}
 		@media(prefers-reduced-motion:reduce){.cp-spinner{animation:none}}
 		.cp-team-photo{margin:0 0 22px;text-align:center}
-		.cp-team-photo img{max-width:460px;width:100%;height:auto;border-radius:12px;box-shadow:0 3px 14px rgba(0,0,0,.14)}
+		.cp-team-photo img{max-width:460px;width:100%;height:auto;border-radius:12px;box-shadow:0 3px 14px rgba(0,0,0,.14);transition:box-shadow .25s ease,transform .25s ease}
+		/* La foto e\' un pulsante: cosi\' si raggiunge da tastiera e i lettori di
+		   schermo la annunciano come qualcosa su cui si puo\' agire. */
+		.cp-team-photo__apri{display:inline-block;padding:0;border:0;background:none;line-height:0;border-radius:12px;cursor:zoom-in}
+		.cp-team-photo__apri:hover img{box-shadow:0 10px 30px rgba(0,0,0,.26);transform:translateY(-2px)}
+		.cp-team-photo__apri:focus-visible{outline:3px solid #d6aa63;outline-offset:4px}
+		/* Ingrandimento a schermo intero. Vive attaccato al corpo della pagina e non
+		   dentro il carosello, che ha overflow nascosto e lo taglierebbe. */
+		.cp-lente{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,10,9,.92);cursor:zoom-out}
+		.cp-lente img{max-width:96vw;max-height:92vh;width:auto;height:auto;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:default}
+		.cp-lente__x{position:absolute;top:14px;right:16px;width:42px;height:42px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:26px;line-height:1;cursor:pointer}
+		.cp-lente__x:hover{background:rgba(255,255,255,.28)}
+		.cp-lente__x:focus-visible{outline:3px solid #d6aa63;outline-offset:3px}
+		@media(prefers-reduced-motion:reduce){.cp-team-photo img{transition:none}.cp-team-photo__apri:hover img{transform:none}}
 		@media(max-width:560px){.cp-cal li{grid-template-columns:1fr;text-align:left}.cp-table{font-size:.82rem}.cp-table th,.cp-table td{padding:7px 4px}}
 		</style>';
 	}
@@ -673,7 +686,13 @@ class CP_Prima_Squadra {
 	public static function render_photo( $s ) {
 		if ( empty( $s->photo ) ) { return ''; }
 		$src = function_exists( 'cp_asset_url' ) ? cp_asset_url( $s->photo ) : $s->photo;
-		return '<figure class="cp-team-photo"><img src="' . esc_url( $src ) . '" alt="Squadra ' . esc_attr( $s->label ) . '" onload="window.dispatchEvent(new Event(\'resize\'))"></figure>';
+		/* La foto sta dentro un pulsante perche' si ingrandisce al clic: usare un
+		   vero <button> invece di un'immagine cliccabile la rende raggiungibile
+		   da tastiera e la fa annunciare come tale dai lettori di schermo. */
+		return '<figure class="cp-team-photo">'
+			. '<button type="button" class="cp-team-photo__apri" aria-label="Ingrandisci la foto della squadra ' . esc_attr( $s->label ) . '">'
+			. '<img src="' . esc_url( $src ) . '" alt="Squadra ' . esc_attr( $s->label ) . '" onload="window.dispatchEvent(new Event(\'resize\'))">'
+			. '</button></figure>';
 	}
 
 	private static function hl( $name ) {
@@ -802,6 +821,63 @@ class CP_Prima_Squadra {
 			   e senza questa chiamata il contenuto piu' alto resterebbe tagliato. */
 			altezza();
 		});
+
+		/* Foto squadra ingrandita al clic.
+		   L'ingrandimento viene appeso al corpo della pagina e non alla slide: il
+		   carosello ha overflow nascosto e altezza fissa in pixel, quindi al suo
+		   interno l'immagine grande verrebbe tagliata.
+		   Anche qui l'ascoltatore sta sul contenitore, perche' le stagioni caricate
+		   dopo via AJAX non esistono ancora quando questo codice gira. */
+		function ingrandisci( img, tornaA ) {
+			var lente = document.createElement( "div" );
+			lente.className = "cp-lente";
+			lente.setAttribute( "role", "dialog" );
+			lente.setAttribute( "aria-modal", "true" );
+			lente.setAttribute( "aria-label", img.getAttribute( "alt" ) || "Foto della squadra" );
+
+			var grande = document.createElement( "img" );
+			grande.src = img.currentSrc || img.src;
+			grande.alt = img.getAttribute( "alt" ) || "";
+
+			var chiudi = document.createElement( "button" );
+			chiudi.type = "button";
+			chiudi.className = "cp-lente__x";
+			chiudi.setAttribute( "aria-label", "Chiudi" );
+			chiudi.innerHTML = "&times;";
+
+			lente.appendChild( grande );
+			lente.appendChild( chiudi );
+			document.body.appendChild( lente );
+
+			/* Si blocca lo scorrimento del sito sotto: senza, muovendo la rotella si
+			   scorre la pagina dietro mentre la foto resta ferma davanti. */
+			var scorrimento = document.body.style.overflow;
+			document.body.style.overflow = "hidden";
+			chiudi.focus();
+
+			function via() {
+				document.removeEventListener( "keydown", tasto );
+				document.body.style.overflow = scorrimento;
+				if ( lente.parentNode ) { lente.parentNode.removeChild( lente ); }
+				if ( tornaA && tornaA.focus ) { tornaA.focus(); }
+			}
+			function tasto( ev ) { if ( "Escape" === ev.key ) { via(); } }
+
+			/* Il clic SULLA foto non chiude: chi la ingrandisce spesso ci clicca sopra
+			   per guardarla meglio, e vedersela sparire e' fastidioso. Si chiude dal
+			   fondo scuro, dalla crocetta o con Esc. */
+			grande.addEventListener( "click", function ( ev ) { ev.stopPropagation(); } );
+			lente.addEventListener( "click", via );
+			chiudi.addEventListener( "click", via );
+			document.addEventListener( "keydown", tasto );
+		}
+
+		root.addEventListener( "click", function ( e ) {
+			var apri = ( e.target && e.target.closest ) ? e.target.closest( ".cp-team-photo__apri" ) : null;
+			if ( ! apri ) { return; }
+			var img = apri.querySelector( "img" );
+			if ( img ) { ingrandisci( img, apri ); }
+		} );
 
 		if (left) { left.addEventListener('click', function () { vai(idx - 1); }); }
 		if (right) { right.addEventListener('click', function () { vai(idx + 1); }); }
