@@ -112,7 +112,6 @@ function cp_stores() {
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
 			'cerca' => 'eye',
 			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano.',
-			'prov'  => false,
 		),
 		array(
 			'name'  => 'Maglie4team',
@@ -121,7 +120,6 @@ function cp_stores() {
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/maglie4team.png',
 			'cerca' => 'maglie4',
 			'desc'  => 'Teamstore ufficiale del club. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925, con le divise e l&rsquo;abbigliamento della societ&agrave;.',
-			'prov'  => true,
 		),
 	);
 

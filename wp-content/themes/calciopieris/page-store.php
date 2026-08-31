@@ -9,10 +9,6 @@
  *
  * Uno store che non ha ancora un logo mostra il proprio nome scritto: la scheda resta
  * completa, e l'immagine compare da sola appena il logo e' disponibile.
- *
- * I paragrafi contrassegnati dal badge "Testo provvisorio" contengono descrizioni di
- * servizio non ancora confermate dal club, seguendo la stessa convenzione adottata in
- * page-sponsors.php: vanno sostituiti quando arrivano i testi ufficiali.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 get_header();
@@ -24,7 +20,6 @@ $stores = function_exists( 'cp_stores' ) ? cp_stores() : array(
 		'site' => 'https://www.eyesportshop.com/it/',
 		'logo' => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
 		'desc' => '',
-		'prov' => false,
 	),
 );
 
@@ -62,7 +57,6 @@ $kit_meta = array(
 .store-hero__actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .store-site{color:var(--g);font-weight:600;font-size:.95rem;text-decoration:underline;text-underline-offset:3px}
 .store-site:hover{color:var(--granata-dark,#6e120e)}
-.store-prov{display:inline-block;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;color:#9a7b1f;background:#faf3e2;border:1px solid #ecdfbe;padding:3px 9px;border-radius:5px;margin-bottom:14px}
 .store-page h2{color:var(--g)}
 .store-kit__head{text-align:center;max-width:640px;margin:0 auto}
 .store-kit__head h2{font-size:clamp(1.9rem,3.6vw,2.6rem);text-transform:uppercase;line-height:1.06;margin:0 0 12px;padding-top:0}
@@ -128,7 +122,6 @@ $kit_meta = array(
 					</a>
 				</div>
 				<div class="store-hero__text">
-					<?php if ( ! empty( $s['prov'] ) ) : ?><span class="store-prov">Testo provvisorio</span><?php endif; ?>
 					<h2><?php echo esc_html( $s['name'] ); ?></h2>
 					<p class="store-lead"><?php echo wp_kses_post( $s['desc'] ); ?></p>
 					<div class="store-hero__actions">
@@ -181,7 +174,6 @@ $kit_meta = array(
 		</section>
 
 		<section class="store-how">
-			<span class="store-prov">Testo provvisorio</span>
 			<h2>Come acquistare</h2>
 			<ol class="store-steps">
 				<li>Apri la sezione dedicata al Calcio Pieris 1925 su <?php
