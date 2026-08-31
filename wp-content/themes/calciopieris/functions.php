@@ -111,7 +111,7 @@ function cp_stores() {
 			'site'  => 'https://www.eyesportshop.com/it/',
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
 			'cerca' => 'eye',
-			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano in campo, in panchina e in trasferta.',
+			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano.',
 			'prov'  => false,
 		),
 		array(
