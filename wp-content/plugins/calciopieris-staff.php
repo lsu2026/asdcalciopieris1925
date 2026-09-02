@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Calcio Pieris – Staff Tecnico
- * Description: Gestisce lo staff tecnico (ruolo + nome) separatamente per Prima Squadra e Settore Giovanile, con righe aggiungibili/rimovibili e ordinabili via trascinamento. I dati alimentano le pagine tramite cp_get_staff(). Contiene inoltre l'area Safeguarding, dove si imposta il Responsabile contro abusi, violenze e discriminazioni che compare nella pagina omonima.
- * Version: 1.1
+ * Plugin Name: Calcio Pieris – Staff e Safeguarding
+ * Description: Gestisce le persone (ruolo + nome) di Prima Squadra, Settore Giovanile e Safeguarding, con righe aggiungibili/rimovibili e ordinabili via trascinamento. I dati alimentano le pagine tramite cp_get_staff() e, per il Safeguarding, lo shortcode [safeguarding].
+ * Version: 1.2
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -12,62 +12,124 @@ class CP_Staff {
 
 	const OPT = 'cp_staff';
 
-	/**
-	 * Il Safeguarding sta in un'opzione tutta sua, non dentro cp_staff.
-	 *
-	 * Non e' un dettaglio di comodo: handle_save() ricostruisce cp_staff da zero
-	 * partendo dalle sole chiavi di groups(), quindi qualunque cosa infilata li'
-	 * dentro sparirebbe al primo salvataggio dello staff. Tenerla separata la
-	 * mette al riparo, e permette alle due aree di essere salvate da form
-	 * distinti senza pestarsi i piedi.
-	 *
-	 * E' un array e non una stringa perche' qui, prima o poi, finiranno anche
-	 * l'indirizzo di posta riservato e i documenti: aggiungere una chiave non
-	 * costa niente, aggiungere un'opzione nuova comporta un'altra migrazione.
-	 */
-	const OPT_SG = 'cp_safeguarding';
+	/** Opzione della vecchia area separata, letta solo per travasarla. */
+	const OPT_VECCHIA = 'cp_safeguarding';
 
+	/**
+	 * I tre gruppi, tutti sullo stesso piano.
+	 *
+	 * Il Safeguarding stava in un'area a parte con un campo solo. Averlo qui
+	 * dentro come gli altri due significa un'anagrafica sola, un salvataggio
+	 * solo e la possibilita' di elencare piu' persone con ruoli diversi:
+	 * il Responsabile non e' per forza uno, e accanto a lui possono esserci
+	 * altre figure.
+	 */
 	public static function groups() {
-		return array( 'prima' => 'Prima Squadra', 'giovanile' => 'Settore Giovanile' );
+		return array(
+			'prima'        => 'Prima Squadra',
+			'giovanile'    => 'Settore Giovanile',
+			'safeguarding' => 'Safeguarding',
+		);
+	}
+
+	/** Nota esplicativa sotto il titolo di ogni gruppo, nel pannello. */
+	public static function group_note( $g ) {
+		if ( 'safeguarding' === $g ) {
+			return 'Le persone indicate qui compaiono nella <strong>pagina Safeguarding</strong>. '
+				. 'Usa il campo Riferimenti per il ruolo esatto, ad esempio '
+				. '<em>Responsabile contro abusi, violenze e discriminazioni</em>.';
+		}
+		return '';
 	}
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_post_cpstaff_save', array( __CLASS__, 'handle_save' ) );
-		add_action( 'admin_post_cpsg_save', array( __CLASS__, 'handle_save_sg' ) );
+		add_action( 'plugins_loaded', array( __CLASS__, 'travasa_vecchia_area' ), 20 );
 
-		/* Il nome sta in un'opzione, la pagina Safeguarding e' testo salvato nel
-		   database: lo shortcode e' il ponte fra i due. Cosi' il testo resta
-		   modificabile dall'editor e il nome si cambia da un campo solo, senza
-		   che chi lo aggiorna debba entrare nell'HTML della pagina. */
-		add_shortcode( 'responsabile_safeguarding', array( __CLASS__, 'sc_responsabile' ) );
-	}
-
-	/* ---------------- Safeguarding ---------------- */
-
-	/** Nominativo del Responsabile, stringa vuota se non ancora indicato. */
-	public static function get_responsabile() {
-		$sg = get_option( self::OPT_SG, array() );
-		return ( is_array( $sg ) && ! empty( $sg['nome'] ) ) ? $sg['nome'] : '';
+		/* I nomi stanno nel database come dati, la pagina Safeguarding e' testo:
+		   lo shortcode e' il ponte fra i due. Cosi' il testo resta modificabile
+		   dall'editor e le persone si cambiano dal pannello, senza che chi le
+		   aggiorna debba entrare nell'HTML della pagina. */
+		add_shortcode( 'safeguarding', array( __CLASS__, 'sc_safeguarding' ) );
 	}
 
 	/**
-	 * Restituisce il nominativo pronto da mettere in pagina.
+	 * Travaso una tantum dalla vecchia area separata.
 	 *
-	 * Se non e' stato ancora indicato NON stampa un vuoto: la frase che lo
-	 * precede annuncia una nomina, e lasciarla senza seguito farebbe sembrare
-	 * la pagina rotta. Dice invece che la nomina non e' ancora pubblicata, che
-	 * e' la cosa vera.
+	 * La versione precedente teneva un nome solo nell'opzione cp_safeguarding.
+	 * Qui viene spostato nel gruppo 'safeguarding' come prima riga, con il
+	 * ruolo per esteso, e la vecchia opzione sparisce. Senza questo passaggio
+	 * il nome gia' inserito si perderebbe in silenzio all'aggiornamento, che e'
+	 * il modo peggiore di perdere un dato.
 	 */
-	public static function sc_responsabile() {
-		$nome = self::get_responsabile();
-		return '' === $nome
-			? '<em>nominativo in corso di pubblicazione</em>'
-			: '<strong>' . esc_html( $nome ) . '</strong>';
+	public static function travasa_vecchia_area() {
+		$vecchia = get_option( self::OPT_VECCHIA, null );
+		if ( null === $vecchia ) { return; }   // niente da travasare
+
+		if ( is_array( $vecchia ) && ! empty( $vecchia['nome'] ) ) {
+			$tutti = get_option( self::OPT, array() );
+			if ( ! is_array( $tutti ) ) { $tutti = array(); }
+			if ( empty( $tutti['safeguarding'] ) ) {
+				$tutti['safeguarding'] = array( array(
+					'role' => 'Responsabile contro abusi, violenze e discriminazioni',
+					'name' => $vecchia['nome'],
+				) );
+				update_option( self::OPT, $tutti );
+			}
+		}
+		delete_option( self::OPT_VECCHIA );
 	}
 
-	/** Righe di default (uguali per i due gruppi finché non si modifica). */
-	public static function default_rows() {
+	/* ---------------- Safeguarding sul sito ---------------- */
+
+	/**
+	 * [safeguarding]  -> l'elenco delle persone, come tabella Ruolo / Nome.
+	 *
+	 * La forma e' la stessa dell'organigramma e dello staff tecnico: una
+	 * tabella semplice dentro .entry-content, che il tema stila gia'. Nessuna
+	 * classe nuova e nessun CSS aggiunto, cosi' le tre pagine restano coerenti
+	 * anche il giorno che si cambia lo stile delle tabelle.
+	 *
+	 * Se non e' stato indicato nessuno NON stampa una tabella vuota: la frase
+	 * che precede annuncia una nomina, e lasciarla senza seguito farebbe
+	 * sembrare la pagina rotta. Dice invece che i nominativi non sono ancora
+	 * pubblicati, che e' la cosa vera.
+	 */
+	public static function sc_safeguarding( $atts ) {
+		$a = shortcode_atts( array( 'titolo' => '' ), $atts, 'safeguarding' );
+
+		$righe = array();
+		foreach ( self::get_group( 'safeguarding' ) as $r ) {
+			$role = isset( $r['role'] ) ? trim( $r['role'] ) : '';
+			$name = isset( $r['name'] ) ? trim( $r['name'] ) : '';
+			if ( '' === $role && '' === $name ) { continue; }
+			$righe[] = array( $role, $name );
+		}
+
+		if ( ! $righe ) {
+			return '<p><em>nominativi in corso di pubblicazione</em></p>';
+		}
+
+		$h = '';
+		if ( '' !== $a['titolo'] ) { $h .= '<h2>' . esc_html( $a['titolo'] ) . '</h2>'; }
+		$h .= '<table><thead><tr><th>Ruolo</th><th>Nome</th></tr></thead><tbody>';
+		foreach ( $righe as $r ) {
+			$h .= '<tr><td>' . esc_html( $r[0] ) . '</td><td>' . esc_html( $r[1] ) . '</td></tr>';
+		}
+		return $h . '</tbody></table>';
+	}
+
+	/**
+	 * Righe di default, usate finche' un gruppo non viene salvato.
+	 *
+	 * Valgono SOLO per i due gruppi tecnici. Per il Safeguarding il default e'
+	 * vuoto: ereditare l'elenco degli allenatori vorrebbe dire pubblicare come
+	 * responsabili contro abusi e violenze delle persone che non lo sono. Un
+	 * elenco vuoto e' scomodo, quello sbagliato e' un danno.
+	 */
+	public static function default_rows( $g = 'prima' ) {
+		if ( 'safeguarding' === $g ) { return array(); }
 		return array(
 			array( 'role' => 'Responsabile · Tecnico UEFA B',            'name' => 'Massimo Wisniewski' ),
 			array( 'role' => 'Tecnico UEFA E · Educatrice',              'name' => 'Luisa Rodà' ),
@@ -82,77 +144,14 @@ class CP_Staff {
 		if ( is_array( $all ) && isset( $all[ $g ] ) && is_array( $all[ $g ] ) ) {
 			return $all[ $g ];
 		}
-		return self::default_rows();
+		return self::default_rows( $g );
 	}
 
 	/* ---------------- Admin ---------------- */
 
 	public static function menu() {
-		$hook = add_menu_page( 'Staff Tecnico', 'Staff Tecnico', 'manage_options', 'cp-staff', array( __CLASS__, 'page' ), 'dashicons-whistle', 29 );
+		$hook = add_menu_page( 'Staff e Safeguarding', 'Staff e Safeguarding', 'manage_options', 'cp-staff', array( __CLASS__, 'page' ), 'dashicons-groups', 29 );
 		add_action( 'admin_print_scripts-' . $hook, function () { wp_enqueue_script( 'jquery-ui-sortable' ); } );
-
-		/* Pagina propria, non una sezione in fondo a quella dello staff: il
-		   Responsabile Safeguarding e' un'altra cosa rispetto ai tecnici, ha un
-		   suo salvataggio e non deve essere toccato per sbaglio da chi sta
-		   riordinando le righe degli allenatori. */
-		add_submenu_page( 'cp-staff', 'Safeguarding', 'Safeguarding', 'manage_options', 'cp-safeguarding', array( __CLASS__, 'page_sg' ) );
-	}
-
-	public static function handle_save_sg() {
-		if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Non autorizzato.' ); }
-		check_admin_referer( 'cpsg_save' );
-
-		$nome = isset( $_POST['cpsg_nome'] ) ? sanitize_text_field( wp_unslash( $_POST['cpsg_nome'] ) ) : '';
-
-		$sg = get_option( self::OPT_SG, array() );
-		if ( ! is_array( $sg ) ) { $sg = array(); }
-		$sg['nome'] = $nome;
-		update_option( self::OPT_SG, $sg );
-
-		wp_safe_redirect( add_query_arg( array( 'page' => 'cp-safeguarding', 'updated' => '1' ), admin_url( 'admin.php' ) ) );
-		exit;
-	}
-
-	public static function page_sg() {
-		if ( ! current_user_can( 'manage_options' ) ) { return; }
-		$nome = self::get_responsabile();
-		$pagina = get_page_by_path( 'safeguarding' );
-		?>
-		<div class="wrap">
-			<h1>Safeguarding</h1>
-			<?php if ( isset( $_GET['updated'] ) ) : ?>
-				<div class="notice notice-success is-dismissible"><p>Nominativo salvato.</p></div>
-			<?php endif; ?>
-
-			<p>Nominativo del <strong>Responsabile contro abusi, violenze e discriminazioni</strong>.
-			Compare nella pagina Safeguarding del sito, subito sotto la frase che ne annuncia la nomina.</p>
-
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="cpsg_save">
-				<?php wp_nonce_field( 'cpsg_save' ); ?>
-				<table class="form-table" role="presentation">
-					<tr>
-						<th scope="row"><label for="cpsg_nome">Nome e cognome</label></th>
-						<td>
-							<input type="text" id="cpsg_nome" name="cpsg_nome" class="regular-text"
-								value="<?php echo esc_attr( $nome ); ?>" placeholder="Mario Rossi">
-							<p class="description">
-								Se lo lasci vuoto, sul sito compare <em>&laquo;nominativo in corso di pubblicazione&raquo;</em>
-								invece di uno spazio bianco.
-							</p>
-						</td>
-					</tr>
-				</table>
-				<?php submit_button( 'Salva nominativo' ); ?>
-			</form>
-
-			<?php if ( $pagina ) : ?>
-				<p><a href="<?php echo esc_url( get_permalink( $pagina->ID ) ); ?>" target="_blank" rel="noopener">Vedi la pagina sul sito &rarr;</a></p>
-			<?php else : ?>
-				<div class="notice notice-warning inline"><p>La pagina <code>safeguarding</code> non esiste in questo sito: il nominativo non verrebbe mostrato da nessuna parte.</p></div>
-			<?php endif; ?>
-		</div>
-		<?php
 	}
 
 	public static function handle_save() {
@@ -179,23 +178,32 @@ class CP_Staff {
 		if ( ! current_user_can( 'manage_options' ) ) { return; }
 		?>
 		<div class="wrap">
-			<h1>Staff Tecnico</h1>
+			<h1>Staff e Safeguarding</h1>
 			<?php if ( isset( $_GET['updated'] ) ) : ?>
-				<div class="notice notice-success is-dismissible"><p>Staff salvato.</p></div>
+				<div class="notice notice-success is-dismissible"><p>Salvato.</p></div>
 			<?php endif; ?>
-			<p>Gestisci lo staff tecnico separatamente per le due sezioni. <strong>Trascina</strong> le righe dall'icona (⋮⋮) per ordinarle.</p>
+			<p>Gestisci le persone di ciascuna sezione. <strong>Trascina</strong> le righe dall'icona (⋮⋮) per ordinarle;
+			il <strong>Riferimenti</strong> &egrave; il ruolo, il <strong>Nome</strong> la persona. Un unico
+			<strong>Salva</strong> in fondo vale per tutte e tre le sezioni.</p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="cpstaff_save">
 				<?php wp_nonce_field( 'cpstaff_save' ); ?>
 				<?php foreach ( self::groups() as $g => $label ) : ?>
 					<h2 style="margin-top:28px"><?php echo esc_html( $label ); ?></h2>
+					<?php $nota = self::group_note( $g ); ?>
+					<?php if ( '' !== $nota ) : ?>
+						<p class="description" style="max-width:820px;margin:-6px 0 12px"><?php echo wp_kses_post( $nota ); ?></p>
+					<?php endif; ?>
 					<div class="cpstaff-rows" data-group="<?php echo esc_attr( $g ); ?>">
 						<?php foreach ( self::get_group( $g ) as $i => $r ) { self::render_row( $g, $i, $r ); } ?>
 					</div>
+					<?php if ( ! self::get_group( $g ) ) : ?>
+						<p class="cpstaff-vuoto" data-group="<?php echo esc_attr( $g ); ?>"><em>Nessuna persona indicata: sul sito compare &laquo;nominativi in corso di pubblicazione&raquo;.</em></p>
+					<?php endif; ?>
 					<p><button type="button" class="button cpstaff-add" data-group="<?php echo esc_attr( $g ); ?>">+ Aggiungi persona</button></p>
 				<?php endforeach; ?>
-				<?php submit_button( 'Salva staff' ); ?>
+				<?php submit_button( 'Salva' ); ?>
 			</form>
 		</div>
 
@@ -218,6 +226,9 @@ class CP_Staff {
 				for ( var i=0;i<els.length;i++ ){ els[i].setAttribute('name', els[i].getAttribute('name').replace(/__G__/g, group).replace(/__I__/g, uid)); }
 				var wrap = document.querySelector('.cpstaff-rows[data-group="'+group+'"]');
 				wrap.appendChild(node);
+				/* l'avviso "nessuna persona" non ha piu' senso appena se ne aggiunge una */
+				var vuoto = document.querySelector('.cpstaff-vuoto[data-group="'+group+'"]');
+				if ( vuoto ) { vuoto.parentNode.removeChild(vuoto); }
 				if ( window.jQuery ) { window.jQuery(wrap).sortable('refresh'); }
 			}
 			var adds = document.querySelectorAll('.cpstaff-add');
@@ -256,9 +267,15 @@ if ( ! function_exists( 'cp_get_staff' ) ) {
 	}
 }
 
-if ( ! function_exists( 'cp_get_responsabile_safeguarding' ) ) {
-	/** Nominativo del Responsabile Safeguarding, stringa vuota se non indicato. */
-	function cp_get_responsabile_safeguarding() {
-		return CP_Staff::get_responsabile();
+if ( ! function_exists( 'cp_get_safeguarding' ) ) {
+	/**
+	 * Le persone del Safeguarding (role, name), array vuoto se non indicate.
+	 *
+	 * E' cp_get_staff('safeguarding') con un nome che si legge meglio dai
+	 * template. Sostituisce cp_get_responsabile_safeguarding(), che tornava un
+	 * nome solo: adesso le persone possono essere piu' di una.
+	 */
+	function cp_get_safeguarding() {
+		return CP_Staff::get_group( 'safeguarding' );
 	}
 }
