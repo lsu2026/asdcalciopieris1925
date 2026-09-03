@@ -1233,7 +1233,11 @@ a:hover { color: var(--oro); }
 
 .cff-wrapper .cff-share-container { display: none !important; }
 
+/* Quando la sezione Facebook apre la pagina News non serve staccarla
+   dall'alto; il distacco serve invece fra lei e l'archivio che segue. */
 .news-da-facebook { margin-top: 56px; }
+.news-da-facebook--prima { margin-top: 0; }
+.news-archivio { margin-top: 64px; padding-top: 8px; }
 .news-da-facebook .section-head { margin-bottom: 24px; }
 
 /* A tutta larghezza una scheda di solo testo e' quasi vuota: due colonne le
