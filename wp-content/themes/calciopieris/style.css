@@ -1106,65 +1106,156 @@ a:hover { color: var(--oro); }
 /* ---------- News che arrivano da Facebook (Smash Balloon) ----------
    Il plugin gratuito non offre nessun aggancio per rifare il suo markup: gli
    unici filtri che espone riguardano la telemetria. Quindi si prende quello
-   che stampa e lo si riveste, per farlo somigliare alle news scritte a mano. */
+   che stampa e lo si riveste, ricalcando .news-card: stesso bordo oro, stesso
+   filetto sopra la data, stesso richiamo in fondo. L'obiettivo non e' fare
+   qualcosa di bello per conto suo, ma che le due specie di news si somiglino
+   quando stanno una accanto all'altra. */
 
 .cff-wrapper .cff-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   background: var(--bianco);
-  border: var(--line) solid var(--grigio);
+  border: 1px solid var(--oro);
+  border-bottom: 1px solid var(--oro) !important;
   border-radius: var(--radius);
-  padding: 20px 24px 16px;
-  margin: 0 0 18px;
-  box-shadow: 0 3px 14px rgba(0,0,0,.05);
+  box-shadow: 0 1px 0 rgba(214,170,99,.35);
+  padding: 26px 26px 24px;
+  margin: 0 0 22px;
+  transition: border-color .2s;
+}
+.cff-wrapper .cff-item:hover { border-color: var(--granata); }
+
+/* Il plugin scrive padding e bordo con selettori che partono da #cff, e un
+   identificatore batte qualunque numero di classi: senza ripetere #cff qui, le
+   regole di sopra verrebbero ignorate. In particolare #cff .cff-item:first-child
+   azzera il padding superiore, ed e' il motivo per cui il filetto oro della
+   prima scheda finiva a cavallo del bordo mentre nelle altre stava dentro. */
+#cff .cff-item,
+#cff .cff-item:first-child {
+  padding: 26px 26px 24px;
+  margin: 0 0 22px;
+  border-bottom: 1px solid var(--oro);
+  float: none;
 }
 
-/* L'autore e' sempre la stessa Pagina: nome e immagine su ogni post sono
-   rumore. La data invece serve, e sta nello stesso blocco: si nascondono le
-   due parti inutili e si tiene quella buona. */
+.cff-wrapper .cff-item::after {
+  content: "";
+  position: absolute;
+  top: 22px; right: 24px;
+  width: 18px; height: 18px;
+  opacity: .22;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23901913' d='M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
 .cff-wrapper .cff-author-img,
 .cff-wrapper .cff-page-name { display: none !important; }
-.cff-wrapper .cff-author { margin: 0 0 10px; min-height: 0; }
+.cff-wrapper .cff-author { margin: 0; min-height: 0; }
 .cff-wrapper .cff-author-text { margin: 0; }
+
+/* Il margine sinistro di 50px che il plugin mette alla data e' lo spazio
+   riservato all'avatar. Avendolo nascosto, quello spazio resta vuoto e sposta
+   data e filetto verso destra.
+   Il selettore ricalca il loro (#cff .cff-author .cff-date, con !important):
+   un identificatore batte qualunque numero di classi, quindi senza il #cff il
+   solo !important non basterebbe. */
+#cff .cff-author .cff-date,
+.cff-wrapper #cff .cff-author .cff-date {
+  margin: 0 0 10px !important;
+  float: none;
+  clear: none;
+}
+
 .cff-wrapper .cff-date {
   font-family: var(--font-display);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .12em;
-  font-size: .72rem;
+  font-size: .85rem;
   color: var(--oro);
+  margin: 0 0 10px !important;
+}
+.cff-wrapper .cff-date::before {
+  content: "";
+  display: block;
+  width: 42px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--oro), rgba(214,170,99,.25));
+  border-radius: 2px;
+  margin-bottom: 12px;
 }
 
 .cff-wrapper .cff-post-text,
-.cff-wrapper .cff-text { font-size: 1rem; line-height: 1.7; color: #333; }
-
-.cff-wrapper .cff-expand a,
-.cff-wrapper .cff-post-links a {
-  color: var(--granata);
-  font-weight: 600;
-  text-decoration: none;
-  border-bottom: 2px solid var(--oro);
-  padding-bottom: 1px;
+.cff-wrapper .cff-text {
+  font-size: .95rem;
+  line-height: 1.75;
+  color: #555;
 }
-.cff-wrapper .cff-post-links { margin-top: 12px; font-size: .9rem; }
+.cff-wrapper .cff-post-text { flex: 1; margin: 0; }
 
-/* apre un menu di condivisione di Facebook che sul sito non serve */
+.cff-wrapper .cff-post-text a { color: var(--granata); text-decoration: underline; text-underline-offset: 2px; }
+
+.cff-wrapper .cff-readmore {
+  background: none;
+  border: 0;
+  padding: 0 0 0 4px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--granata) !important;
+  font-weight: 600;
+}
+
+.cff-wrapper .cff-post-links { margin-top: 18px; }
+.cff-wrapper .cff-viewpost-facebook {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .95rem;
+  color: var(--granata);
+  text-decoration: none;
+}
+.cff-wrapper .cff-viewpost-facebook::after { content: "\2192"; margin-left: 6px; }
+.cff-wrapper .cff-viewpost-facebook:hover { color: var(--granata-dark); }
+
+/* Il plugin rende il testo per i lettori di schermo come display:block, e
+   dentro al link questo mandava la freccia a capo. Si toglie dal flusso con
+   il modo consueto, che lo nasconde alla vista lasciandolo agli screen
+   reader: display:none lo toglierebbe anche a loro. */
+.cff-wrapper .cff-screenreader {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .cff-wrapper .cff-share-container { display: none !important; }
 
-/* La sezione in fondo alla pagina News, staccata dalle news scritte a mano. */
 .news-da-facebook { margin-top: 56px; }
 .news-da-facebook .section-head { margin-bottom: 24px; }
 
-/* ---------- I post di Facebook dentro il carosello della home ----------
-   Il carosello dispone i propri figli diretti in fila. Il plugin invece
-   annida i post dentro quattro contenitori, che arriverebbero come UN solo
-   elemento largo quanto tutta la fila. Con display:contents quei contenitori
-   spariscono dal calcolo del layout senza sparire dal documento: i post
-   diventano cosi' figli della fila e il carosello li tratta come gli altri. */
+/* A tutta larghezza una scheda di solo testo e' quasi vuota: due colonne le
+   danno una proporzione sensata, con la stessa griglia delle news di sopra. */
+.news-da-facebook .cff-posts-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 24px;
+  align-items: start;
+}
+/* di nuovo #cff: senza, vincerebbe il margine di 22px della regola generale */
+.news-da-facebook #cff .cff-item { margin: 0; height: 100%; }
+
+/* ---------- I post di Facebook dentro il carosello della home ---------- */
 .news-embeds-row .cff-wrapper,
 .news-embeds-row .cff-wrapper-ctn,
 .news-embeds-row .cff,
 .news-embeds-row .cff-posts-wrap { display: contents; }
 
-.news-embeds-row .cff-item {
+/* idem qui: nel carosello le schede non devono avere margine sotto, o la
+   fila si sfalsa rispetto alle altre voci */
+.news-embeds-row #cff .cff-item {
   flex: 0 1 340px;
   max-width: 100%;
   margin: 0;
