@@ -86,6 +86,42 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 
 
 /**
+ * Il feed Facebook di una sezione, gia' pronto da stampare, o stringa vuota.
+ *
+ * Si cerca per NOME e non per numero: gli identificativi dei feed nascono
+ * diversi in ogni ambiente, come le voci di menu, e scriverli fissi
+ * funzionerebbe solo in locale.
+ *
+ * Torna vuoto in tutti i casi in cui non c'e' niente di buono da mostrare:
+ * plugin assente, feed non configurato, nessun post. Cosi' chi chiama puo'
+ * ripiegare sulle news scritte a mano invece di lasciare un buco in pagina.
+ */
+function cp_feed_facebook( $nome ) {
+	if ( ! shortcode_exists( 'custom-facebook-feed' ) ) { return ''; }
+
+	global $wpdb;
+	$tabella = $wpdb->prefix . 'cff_feeds';
+
+	/* la tabella esiste solo se il plugin e' installato: chiederla senza
+	   controllare stamperebbe un errore del database in cima alla pagina */
+	static $c_e_la_tabella = null;
+	if ( null === $c_e_la_tabella ) {
+		$c_e_la_tabella = ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tabella ) ) === $tabella );
+	}
+	if ( ! $c_e_la_tabella ) { return ''; }
+
+	$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$tabella` WHERE feed_name = %s LIMIT 1", $nome ) );
+	if ( ! $id ) { return ''; }
+
+	/* lo shortcode a volte stampa invece di restituire: si raccoglie entrambe */
+	ob_start();
+	$restituito = do_shortcode( '[custom-facebook-feed feed=' . (int) $id . ']' );
+	$html = ob_get_clean() . $restituito;
+
+	return ( false !== strpos( $html, 'cff-item' ) ) ? $html : '';
+}
+
+/**
  * Gli store ufficiali del club.
  *
  * Sono due e stanno sullo stesso piano: EYE Sports e Maglie4team.

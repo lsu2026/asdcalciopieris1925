@@ -158,6 +158,14 @@ get_header();
 		<button class="news-nav news-nav--prev" type="button" aria-label="Indietro">&lsaquo;</button>
 		<div class="news-embeds-row" id="cp-news-row">
 			<?php
+			/* Prima si prova il feed di Facebook: e' quello che si aggiorna da
+			   solo. Se non c'e' nulla da mostrare - plugin spento, Pagina non
+			   collegata, nessun post - si ripiega sulle news scritte a mano,
+			   cosi' la sezione non resta mai vuota. */
+			$cp_feed_home = function_exists( 'cp_feed_facebook' ) ? cp_feed_facebook( 'Pieris - Home (ultimi 5)' ) : '';
+			if ( $cp_feed_home ) {
+				echo $cp_feed_home; // gia' ripulito dal plugin
+			} else {
 			$news = new WP_Query( array( 'posts_per_page' => 6, 'ignore_sticky_posts' => true ) );
 			if ( $news->have_posts() ) :
 				while ( $news->have_posts() ) : $news->the_post();
@@ -178,7 +186,8 @@ get_header();
 					<a class="leggi" href="<?php the_permalink(); ?>">Leggi tutto &rarr;</a>
 				</div>
 			</article>
-			<?php endif; endwhile; wp_reset_postdata(); endif; ?>
+			<?php endif; endwhile; wp_reset_postdata(); endif;
+			} /* fine del ripiego sulle news scritte a mano */ ?>
 			</div>
 			<button class="news-nav news-nav--next" type="button" aria-label="Scorri avanti">&rsaquo;</button>
 		</div><!-- /.news-carousel -->
@@ -190,7 +199,9 @@ get_header();
 			var prev = document.querySelector('.news-nav--prev');
 			var next = document.querySelector('.news-nav--next');
 			var dotsWrap = document.getElementById('cp-news-dots');
-			var items = Array.prototype.slice.call( row.querySelectorAll('.news-embed-item, .news-card') );
+			/* .cff-item sono i post che arrivano da Facebook: il CSS appiattisce
+			   i contenitori del plugin, quindi qui si comportano come gli altri */
+			var items = Array.prototype.slice.call( row.querySelectorAll('.news-embed-item, .news-card, .cff-item') );
 			if ( ! items.length ) return;
 			var page = 0, perPage = 1, pages = 1, animating = false;
 

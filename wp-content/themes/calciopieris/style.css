@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.4.0
+Version: 1.5.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -1101,4 +1101,72 @@ a:hover { color: var(--oro); }
     border-bottom: 5px solid var(--oro);
   }
   .cta-band { padding: 36px 28px; }
+}
+
+/* ---------- News che arrivano da Facebook (Smash Balloon) ----------
+   Il plugin gratuito non offre nessun aggancio per rifare il suo markup: gli
+   unici filtri che espone riguardano la telemetria. Quindi si prende quello
+   che stampa e lo si riveste, per farlo somigliare alle news scritte a mano. */
+
+.cff-wrapper .cff-item {
+  background: var(--bianco);
+  border: var(--line) solid var(--grigio);
+  border-radius: var(--radius);
+  padding: 20px 24px 16px;
+  margin: 0 0 18px;
+  box-shadow: 0 3px 14px rgba(0,0,0,.05);
+}
+
+/* L'autore e' sempre la stessa Pagina: nome e immagine su ogni post sono
+   rumore. La data invece serve, e sta nello stesso blocco: si nascondono le
+   due parti inutili e si tiene quella buona. */
+.cff-wrapper .cff-author-img,
+.cff-wrapper .cff-page-name { display: none !important; }
+.cff-wrapper .cff-author { margin: 0 0 10px; min-height: 0; }
+.cff-wrapper .cff-author-text { margin: 0; }
+.cff-wrapper .cff-date {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: .72rem;
+  color: var(--oro);
+}
+
+.cff-wrapper .cff-post-text,
+.cff-wrapper .cff-text { font-size: 1rem; line-height: 1.7; color: #333; }
+
+.cff-wrapper .cff-expand a,
+.cff-wrapper .cff-post-links a {
+  color: var(--granata);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 2px solid var(--oro);
+  padding-bottom: 1px;
+}
+.cff-wrapper .cff-post-links { margin-top: 12px; font-size: .9rem; }
+
+/* apre un menu di condivisione di Facebook che sul sito non serve */
+.cff-wrapper .cff-share-container { display: none !important; }
+
+/* La sezione in fondo alla pagina News, staccata dalle news scritte a mano. */
+.news-da-facebook { margin-top: 56px; }
+.news-da-facebook .section-head { margin-bottom: 24px; }
+
+/* ---------- I post di Facebook dentro il carosello della home ----------
+   Il carosello dispone i propri figli diretti in fila. Il plugin invece
+   annida i post dentro quattro contenitori, che arriverebbero come UN solo
+   elemento largo quanto tutta la fila. Con display:contents quei contenitori
+   spariscono dal calcolo del layout senza sparire dal documento: i post
+   diventano cosi' figli della fila e il carosello li tratta come gli altri. */
+.news-embeds-row .cff-wrapper,
+.news-embeds-row .cff-wrapper-ctn,
+.news-embeds-row .cff,
+.news-embeds-row .cff-posts-wrap { display: contents; }
+
+.news-embeds-row .cff-item {
+  flex: 0 1 340px;
+  max-width: 100%;
+  margin: 0;
+  align-self: stretch;
 }

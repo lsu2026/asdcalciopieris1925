@@ -33,7 +33,24 @@ get_header();
 			<?php endif; endwhile; ?>
 		</div>
 		<div class="pagination"><?php echo paginate_links(); ?></div>
-		<?php else : ?>
+		<?php endif; ?>
+
+		<?php
+		/* Sotto le news scritte a mano, quelle che arrivano da sole dalla
+		   Pagina Facebook. Restano separate e non mescolate: le prime portano
+		   foto e reazioni, queste solo il testo, e fingere che siano la stessa
+		   cosa si vedrebbe. Il titolo dice da dove vengono. */
+		$cp_feed_news = function_exists( 'cp_feed_facebook' ) ? cp_feed_facebook( 'Pieris - News (tutti)' ) : '';
+		if ( $cp_feed_news ) :
+		?>
+		<section class="news-da-facebook">
+			<div class="section-head">
+				<div class="overline">Aggiornato automaticamente</div>
+				<h2>Dalla nostra pagina Facebook</h2>
+			</div>
+			<?php echo $cp_feed_news; // gia' ripulito dal plugin ?>
+		</section>
+		<?php elseif ( ! have_posts() ) : ?>
 		<p style="text-align:center;">Nessun articolo trovato.</p>
 		<?php endif; ?>
 	</div>
