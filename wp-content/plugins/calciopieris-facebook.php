@@ -88,8 +88,9 @@ class CP_Facebook {
 	public static function app() {
 		$a = get_option( self::OPZ_APP, array() );
 		return wp_parse_args( is_array( $a ) ? $a : array(), array(
-			'id'      => '',
-			'segreto' => '',
+			'id'            => '',
+			'segreto'       => '',
+			'configurazione' => '',
 		) );
 	}
 
@@ -142,13 +143,27 @@ class CP_Facebook {
 		$stato = wp_create_nonce( 'cp_fb_ritorno' );
 		set_transient( 'cp_fb_stato_login', $stato, 15 * MINUTE_IN_SECONDS );
 
-		$url = 'https://www.facebook.com/' . self::API . '/dialog/oauth?' . http_build_query( array(
+		$parametri = array(
 			'client_id'     => $app['id'],
 			'redirect_uri'  => self::ritorno(),
 			'state'         => $stato,
-			'scope'         => self::PERMESSI,
 			'response_type' => 'code',
-		) );
+		);
+
+		/* Meta ha DUE sistemi di login e le applicazioni finiscono sull'uno o
+		   sull'altro a seconda del caso d'uso scelto quando le si crea.
+		   Quello classico vuole i permessi in "scope"; quello "for Business"
+		   vuole invece un ID configurazione, e lo scope lo ignora. Non c'e' modo
+		   di indovinare da qui quale sia: se l'ID configurazione e' stato
+		   compilato si usa quello, altrimenti si resta sul classico. */
+		if ( '' !== $app['configurazione'] ) {
+			$parametri['config_id']                      = $app['configurazione'];
+			$parametri['override_default_response_type'] = 'true';
+		} else {
+			$parametri['scope'] = self::PERMESSI;
+		}
+
+		$url = 'https://www.facebook.com/' . self::API . '/dialog/oauth?' . http_build_query( $parametri );
 
 		wp_redirect( $url ); // esterno: wp_safe_redirect lo rifiuterebbe
 		exit;
@@ -626,6 +641,10 @@ class CP_Facebook {
 			$app['segreto'] = sanitize_text_field( $segreto );
 		}
 
+		$app['configurazione'] = isset( $_POST['app_configurazione'] )
+			? preg_replace( '/[^0-9]/', '', (string) wp_unslash( $_POST['app_configurazione'] ) )
+			: '';
+
 		update_option( self::OPZ_APP, $app, false );
 		self::torna( 'ok', 'Dati dell&rsquo;applicazione salvati.' );
 	}
@@ -715,6 +734,20 @@ class CP_Facebook {
 							<input name="app_segreto" id="cpfb-segreto" type="password" class="regular-text" autocomplete="off"
 								placeholder="<?php echo $app['segreto'] ? 'gia&rsquo; impostata: lascia vuoto per non cambiarla' : 'incolla qui la chiave segreta'; ?>">
 							<p class="description">Resta su questo sito e non viene mai mostrata.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="cpfb-config">ID configurazione</label></th>
+						<td>
+							<input name="app_configurazione" id="cpfb-config" type="text" class="regular-text"
+								value="<?php echo esc_attr( $app['configurazione'] ); ?>">
+							<p class="description">
+								<strong>Da lasciare vuoto</strong>, salvo un caso: se
+								l&rsquo;applicazione usa <em>Facebook Login for Business</em>, i permessi
+								non si chiedono per nome ma tramite una configurazione, e Facebook ne
+								mostra l&rsquo;identificativo nelle impostazioni dell&rsquo;accesso.
+								Compilalo solo se il collegamento fallisce dicendo che mancano i permessi.
+							</p>
 						</td>
 					</tr>
 				</table>
