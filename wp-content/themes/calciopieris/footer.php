@@ -12,7 +12,6 @@
 					<li><a href="<?php echo esc_url( home_url( '/la-nostra-storia/' ) ); ?>">La nostra storia</a></li>
 					<li><a href="<?php echo esc_url( home_url( '/organigramma/' ) ); ?>">Organigramma</a></li>
 					<li><a href="<?php echo esc_url( home_url( '/prima-squadra/' ) ); ?>">Prima squadra</a></li>
-					<li><a href="<?php echo esc_url( home_url( '/news/' ) ); ?>">News</a></li>
 				</ul>
 			</div>
 			<div>

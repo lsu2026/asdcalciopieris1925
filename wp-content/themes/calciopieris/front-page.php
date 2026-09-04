@@ -147,7 +147,7 @@ get_header();
 	</div>
 </section>
 
-<section class="section section-alt">
+<section class="section section-alt" id="news">
 	<div class="container">
 		<div class="section-head">
 			<div class="overline">Ultime notizie</div>
@@ -191,7 +191,6 @@ get_header();
 			</div>
 			<button class="news-nav news-nav--next" type="button" aria-label="Scorri avanti">&rsaquo;</button>
 		</div><!-- /.news-carousel -->
-		<p style="text-align:center;margin-top:36px;"><a class="btn btn-granata" href="<?php echo esc_url( home_url( '/news/' ) ); ?>">Tutte le news</a></p>
 		<script>
 		(function(){
 			var row = document.getElementById('cp-news-row');
