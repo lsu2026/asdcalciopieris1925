@@ -313,7 +313,7 @@ get_header();
 			<div class="store-band__text">
 				<div class="store-band__over"><?php echo esc_html( $cp_elenco ); ?></div>
 				<h2>Indossa i colori <span>granata</span></h2>
-				<p>Divise da gara, abbigliamento da allenamento e merchandising del club: <?php echo $cp_uno ? 'lo store ufficiale' : 'gli store ufficiali'; ?> dell&rsquo;A.S.D. Calcio Pieris 1925 <?php echo $cp_uno ? '&egrave;' : 'sono'; ?> <?php echo esc_html( $cp_elenco ); ?>. Ogni acquisto sostiene direttamente l&rsquo;attivit&agrave; granata.</p>
+				<p>Divise da gara, abbigliamento da allenamento, borse e accessori del club: <?php echo $cp_uno ? 'lo store ufficiale' : 'gli store ufficiali'; ?> dell&rsquo;A.S.D. Calcio Pieris 1925 <?php echo $cp_uno ? '&egrave;' : 'sono'; ?> <?php echo esc_html( $cp_elenco ); ?>. Ogni acquisto sostiene direttamente l&rsquo;attivit&agrave; granata.</p>
 				<ul class="store-band__tags">
 					<li>Divise da gara</li>
 					<li>Allenamento</li>

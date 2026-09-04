@@ -107,7 +107,14 @@ $kit_meta = array(
 		   sezione dedicata al Pieris, non alla home dello shop: e' quella che
 		   interessa a chi arriva da qui. */ ?>
 		<?php if ( count( $stores ) > 1 ) : ?>
-			<p class="store-intro">L&rsquo;A.S.D. Calcio Pieris 1925 ha <strong><?php echo count( $stores ); ?> store ufficiali</strong>. In entrambi trovi una sezione dedicata al club, con le divise e l&rsquo;abbigliamento granata.</p>
+			<?php
+			/* Non si dice piu' cosa si trova "in entrambi": i due store vendono
+			   cose diverse - EYE il materiale tecnico, Maglie4team borse e
+			   accessori - e generalizzare qui vorrebbe dire smentire, poche
+			   righe piu' sotto, la descrizione di ciascuno. Cosa vende chi lo
+			   dice il riquadro del singolo store. */
+			?>
+			<p class="store-intro">L&rsquo;A.S.D. Calcio Pieris 1925 ha <strong><?php echo count( $stores ); ?> store ufficiali</strong>, ciascuno con la propria specialit&agrave;. In ognuno c&rsquo;&egrave; una sezione dedicata al club.</p>
 		<?php endif; ?>
 
 		<?php foreach ( $stores as $s ) : ?>

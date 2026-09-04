@@ -155,7 +155,7 @@ function cp_stores() {
 			'site'  => 'https://maglie4team.it',
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/maglie4team.png',
 			'cerca' => 'maglie4',
-			'desc'  => 'Teamstore ufficiale del club. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925, con le divise e l&rsquo;abbigliamento della societ&agrave;.',
+			'desc'  => 'Borse e accessori del club: sacche, zaini, borsoni e tutto quello che serve per andare al campo. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925.',
 		),
 	);
 
