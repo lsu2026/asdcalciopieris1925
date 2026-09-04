@@ -5,7 +5,7 @@ get_header();
 /* I post che arrivano da soli dalla Pagina Facebook. Si prendono PRIMA di
    entrare nel Loop: cosi' si puo' decidere cosa scrivere in pagina sapendo
    gia' se ci sono o no. */
-$cp_feed_news = function_exists( 'cp_feed_facebook' ) ? cp_feed_facebook( 'Pieris - News (tutti)' ) : '';
+$cp_feed_news = function_exists( 'cp_post_facebook' ) ? cp_post_facebook() : '';
 ?>
 <div class="page-hero">
 	<div class="container">
@@ -33,7 +33,7 @@ $cp_feed_news = function_exists( 'cp_feed_facebook' ) ? cp_feed_facebook( 'Pieri
 				<div class="overline">Aggiornato automaticamente</div>
 				<h2>Dalla nostra pagina Facebook</h2>
 			</div>
-			<?php echo $cp_feed_news; // gia' ripulito dal plugin ?>
+			<div class="news-embeds-home news-embeds-list"><?php echo $cp_feed_news; ?></div>
 		</section>
 		<?php endif; ?>
 
