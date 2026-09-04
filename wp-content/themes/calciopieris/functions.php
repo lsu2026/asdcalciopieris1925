@@ -138,6 +138,11 @@ function cp_feed_facebook( $nome ) {
  * 'logo' puo' essere vuoto: in quel caso i template mostrano il nome scritto,
  * e l'immagine compare da sola appena lo store viene aggiunto fra gli sponsor
  * con il proprio logo (l'abbinamento avviene sul frammento in 'cerca').
+ *
+ * 'cta' e' la scritta sul pulsante principale. Sta qui e non nel template
+ * perche' i due store vendono cose diverse: da EYE si va a prendere i capi,
+ * da Maglie4team le borse e gli accessori. Una scritta sola per tutti
+ * prometterebbe a meta' dei visitatori qualcosa che non trovano.
  */
 function cp_stores() {
 	$stores = array(
@@ -147,6 +152,7 @@ function cp_stores() {
 			'site'  => 'https://www.eyesportshop.com/it/',
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
 			'cerca' => 'eye',
+			'cta'   => 'Vai ai capi granata',
 			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano.',
 		),
 		array(
@@ -155,6 +161,7 @@ function cp_stores() {
 			'site'  => 'https://maglie4team.it',
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/maglie4team.png',
 			'cerca' => 'maglie4',
+			'cta'   => 'Vai agli accessori granata',
 			'desc'  => 'Borse e accessori del club: sacche, zaini, borsoni e tutto quello che serve per andare al campo. Sul sito c&rsquo;&egrave; una sezione dedicata al Calcio Pieris 1925.',
 		),
 	);

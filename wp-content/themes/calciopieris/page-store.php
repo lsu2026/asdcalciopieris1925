@@ -132,7 +132,9 @@ $kit_meta = array(
 					<h2><?php echo esc_html( $s['name'] ); ?></h2>
 					<p class="store-lead"><?php echo wp_kses_post( $s['desc'] ); ?></p>
 					<div class="store-hero__actions">
-						<a class="btn btn-granata" href="<?php echo esc_url( $s['url'] ); ?>" target="_blank" rel="noopener">Vai ai capi granata &rarr;</a>
+						<?php /* la scritta la porta lo store: vendono cose diverse. Il ripiego
+						         serve solo se un domani se ne aggiunge uno senza indicarla. */ ?>
+						<a class="btn btn-granata" href="<?php echo esc_url( $s['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( ! empty( $s['cta'] ) ? $s['cta'] : 'Vai allo store' ); ?> &rarr;</a>
 						<?php if ( ! empty( $s['site'] ) && $s['site'] !== $s['url'] ) : ?>
 							<a class="store-site" href="<?php echo esc_url( $s['site'] ); ?>" target="_blank" rel="noopener">Sito ufficiale</a>
 						<?php endif; ?>
