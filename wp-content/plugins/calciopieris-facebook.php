@@ -85,7 +85,34 @@ class CP_Facebook {
 		add_action( 'admin_post_cp_fb_aggiorna', array( __CLASS__, 'aggiorna_a_mano' ) );
 		add_action( self::EVENTO, array( __CLASS__, 'scarica' ) );
 		add_shortcode( 'post_facebook', array( __CLASS__, 'shortcode' ) );
+		add_filter( 'cron_schedules', array( __CLASS__, 'aggiungi_cadenze' ) );
 		add_action( 'init', array( __CLASS__, 'programma' ) );
+	}
+
+	/**
+	 * Ogni quanto il sito va a vedere se ci sono post nuovi.
+	 *
+	 * WordPress di suo conosce solo orario, due volte al giorno e giornaliero:
+	 * le cadenze piu' fitte vanno aggiunte, ed e' quello che si fa qui.
+	 */
+	public static function cadenze() {
+		return array(
+			'cp_fb_5min'  => array( 'secondi' => 300,   'nome' => 'Ogni 5 minuti' ),
+			'cp_fb_15min' => array( 'secondi' => 900,   'nome' => 'Ogni 15 minuti' ),
+			'cp_fb_30min' => array( 'secondi' => 1800,  'nome' => 'Ogni mezz&rsquo;ora' ),
+			'cp_fb_1ora'  => array( 'secondi' => 3600,  'nome' => 'Ogni ora' ),
+			'cp_fb_6ore'  => array( 'secondi' => 21600, 'nome' => 'Ogni sei ore' ),
+		);
+	}
+
+	public static function aggiungi_cadenze( $elenco ) {
+		foreach ( self::cadenze() as $chiave => $c ) {
+			$elenco[ $chiave ] = array(
+				'interval' => $c['secondi'],
+				'display'  => wp_specialchars_decode( $c['nome'] ),
+			);
+		}
+		return $elenco;
 	}
 
 	/* ===================== impostazioni e credenziali ===================== */
@@ -97,6 +124,7 @@ class CP_Facebook {
 			'nome_pagina' => '',
 			'quanti'      => 12,
 			'in_home'     => 5,
+			'cadenza'     => 'cp_fb_5min',
 		) );
 	}
 
@@ -135,10 +163,24 @@ class CP_Facebook {
 		return admin_url( 'admin.php?page=cp-facebook' );
 	}
 
+	/**
+	 * Mette in calendario il giro automatico, alla cadenza scelta nel pannello.
+	 *
+	 * Se la cadenza in calendario non e' piu' quella voluta - perche' e' stata
+	 * cambiata - il vecchio appuntamento si cancella e se ne prende uno nuovo:
+	 * cambiare l'impostazione senza riprogrammare non avrebbe alcun effetto.
+	 */
 	public static function programma() {
-		if ( ! wp_next_scheduled( self::EVENTO ) ) {
-			wp_schedule_event( time() + 60, 'hourly', self::EVENTO );
+		$cadenze = self::cadenze();
+		$conf    = self::conf();
+		$voluta  = isset( $cadenze[ $conf['cadenza'] ] ) ? $conf['cadenza'] : 'cp_fb_5min';
+
+		$quando = wp_next_scheduled( self::EVENTO );
+		if ( $quando ) {
+			if ( wp_get_schedule( self::EVENTO ) === $voluta ) { return; }
+			wp_unschedule_event( $quando, self::EVENTO );
 		}
+		wp_schedule_event( time() + 60, $voluta, self::EVENTO );
 	}
 
 	/* ===================== login con Facebook ===================== */
@@ -749,7 +791,16 @@ class CP_Facebook {
 		$conf            = self::conf();
 		$conf['quanti']  = max( 1, min( 50, (int) $_POST['quanti'] ) );
 		$conf['in_home'] = max( 1, min( 20, (int) $_POST['in_home'] ) );
+
+		$scelta  = isset( $_POST['cadenza'] ) ? sanitize_key( wp_unslash( $_POST['cadenza'] ) ) : '';
+		$cadenze = self::cadenze();
+		if ( isset( $cadenze[ $scelta ] ) ) { $conf['cadenza'] = $scelta; }
+
 		update_option( self::OPZ_CONF, $conf, false );
+
+		/* l'appuntamento va rifatto subito: salvare la scelta senza
+		   riprogrammare lascerebbe il sito alla cadenza di prima */
+		self::programma();
 
 		self::torna( 'ok', 'Impostazioni salvate.' );
 	}
@@ -936,7 +987,18 @@ class CP_Facebook {
 				<tr><td><strong>Post in casa</strong></td><td><?php echo count( $post ); ?></td></tr>
 				<tr><td><strong>Con foto scaricata</strong></td><td><?php echo (int) $stato['immagini']; ?></td></tr>
 				<tr><td><strong>Prossimo giro</strong></td><td>
-					<?php echo $prossimo ? esc_html( wp_date( 'd/m/Y H:i', $prossimo ) ) : 'non programmato'; ?>
+					<?php
+					$cadenze = self::cadenze();
+					$in_uso  = wp_get_schedule( self::EVENTO );
+					if ( $prossimo ) {
+						echo esc_html( wp_date( 'd/m/Y H:i', $prossimo ) );
+						if ( isset( $cadenze[ $in_uso ] ) ) {
+							echo ' &mdash; ' . esc_html( strtolower( wp_specialchars_decode( $cadenze[ $in_uso ]['nome'] ) ) );
+						}
+					} else {
+						echo 'non programmato';
+					}
+					?>
 				</td></tr>
 				</tbody>
 			</table>
@@ -946,6 +1008,24 @@ class CP_Facebook {
 				<input type="hidden" name="action" value="cp_fb_conf">
 				<?php wp_nonce_field( 'cp_fb_conf' ); ?>
 				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="cpfb-cadenza">Ogni quanto controllare</label></th>
+						<td>
+							<select name="cadenza" id="cpfb-cadenza">
+								<?php foreach ( self::cadenze() as $chiave => $c ) : ?>
+									<option value="<?php echo esc_attr( $chiave ); ?>" <?php selected( $conf['cadenza'], $chiave ); ?>>
+										<?php echo esc_html( wp_specialchars_decode( $c['nome'] ) ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description">
+								I giri di WordPress partono <strong>quando qualcuno visita il sito</strong>, non
+								da soli: su un sito poco frequentato l&rsquo;attesa reale pu&ograve; essere
+								pi&ugrave; lunga di quella scelta qui. Per un aggiornamento subito c&rsquo;&egrave;
+								il pulsante <em>Aggiorna adesso</em>.
+							</p>
+						</td>
+					</tr>
 					<tr>
 						<th scope="row"><label for="cpfb-quanti">Quanti post tenere</label></th>
 						<td><input name="quanti" id="cpfb-quanti" type="number" min="1" max="50" value="<?php echo (int) $conf['quanti']; ?>"></td>
@@ -984,9 +1064,7 @@ class CP_Facebook {
 	/* ===================== accensione e spegnimento ===================== */
 
 	public static function accendi() {
-		if ( ! wp_next_scheduled( self::EVENTO ) ) {
-			wp_schedule_event( time() + 60, 'hourly', self::EVENTO );
-		}
+		self::programma();
 	}
 
 	public static function spegni() {
