@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
  * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
- * Version: 1.4
+ * Version: 1.5
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -118,9 +118,32 @@ class CP_Prima_Squadra {
 		global $wpdb;
 		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'matches' ) . ' WHERE season_id=%d AND comp=%s ORDER BY (mdate IS NULL), mdate ASC, id ASC', $season_id, $comp ) );
 	}
+	/**
+	 * La classifica, ordinata come si ordina una classifica di calcio.
+	 *
+	 * Prima i PUNTI, poi la DIFFERENZA RETI, poi le RETI FATTE. E' l'ordine
+	 * riconosciuto ovunque, ed e' quello che il visitatore si aspetta.
+	 *
+	 * Prima si ordinava per il campo "pos", cioe' per il numero scritto a mano
+	 * al momento dell'inserimento: correggere i punti dal pannello non spostava
+	 * la squadra, e la tabella mostrava una classifica che i suoi stessi numeri
+	 * smentivano. Adesso "pos" conta solo come ULTIMA voce, quando punti,
+	 * differenza reti e reti fatte sono tutti uguali: li' nessun criterio
+	 * sportivo decide piu' niente, e l'ordine pubblicato dalla federazione e'
+	 * l'ipotesi migliore. Il nome chiude, perche' l'ordine non dipenda dal caso.
+	 *
+	 * NOTA: nei campionati dilettanti italiani, a parita' di punti conta prima
+	 * la classifica avulsa (gli scontri diretti). Non si applica qui perche'
+	 * servirebbero le partite, e diverse stagioni hanno la classifica senza il
+	 * calendario: si applicherebbe a intermittenza, il che sarebbe peggio di
+	 * non applicarla.
+	 */
 	public static function standings( $season_id, $comp = self::CAMPIONATO ) {
 		global $wpdb;
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d AND comp=%s ORDER BY pos ASC, pts DESC, (gf-gs) DESC, team ASC', $season_id, $comp ) );
+		return $wpdb->get_results( $wpdb->prepare(
+			'SELECT * FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d AND comp=%s'
+			. ' ORDER BY pts DESC, (gf-gs) DESC, gf DESC, pos ASC, team ASC',
+			$season_id, $comp ) );
 	}
 
 	/** Nome leggibile di una competizione. */
@@ -591,9 +614,12 @@ class CP_Prima_Squadra {
 				<thead><tr><th>Pos</th><th>Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>Pt</th><th>Noi</th><th>Azioni</th></tr></thead>
 				<tbody>
 				<?php if ( empty( $rows ) ) : ?><tr><td colspan="11">Nessuna riga di <?php echo esc_html( self::comp_nome( $comp ) ); ?> per questa stagione.</td></tr>
-				<?php else : foreach ( $rows as $r ) : ?>
+				<?php else : $cp_pos = 0; foreach ( $rows as $r ) : $cp_pos++; ?>
 					<tr>
-						<td><?php echo intval( $r->pos ); ?></td><td><strong><?php echo esc_html( $r->team ); ?></strong></td>
+						<?php /* stessa numerazione calcolata che vede il visitatore: se qui si
+						         mostrasse il campo "pos" scritto a mano, il pannello e il sito
+						         direbbero due classifiche diverse */ ?>
+						<td><?php echo $cp_pos; ?></td><td><strong><?php echo esc_html( $r->team ); ?></strong></td>
 						<td><?php echo intval( $r->pg ); ?></td><td><?php echo intval( $r->v ); ?></td><td><?php echo intval( $r->n ); ?></td><td><?php echo intval( $r->p ); ?></td>
 						<td><?php echo intval( $r->gf ); ?></td><td><?php echo intval( $r->gs ); ?></td><td><strong><?php echo intval( $r->pts ); ?></strong></td>
 						<td><?php echo $r->ours ? '⭐' : ''; ?></td>
@@ -612,7 +638,13 @@ class CP_Prima_Squadra {
 				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="hidden" name="edit_id" value="<?php echo $edit ? intval( $edit->id ) : 0; ?>">
 				<table class="form-table">
-					<tr><th><label>Posizione</label></th><td><input type="number" name="pos" value="<?php echo $edit ? intval( $edit->pos ) : count( $rows ) + 1; ?>" class="small-text"></td></tr>
+					<tr><th><label>Posizione</label></th><td>
+						<input type="number" name="pos" value="<?php echo $edit ? intval( $edit->pos ) : count( $rows ) + 1; ?>" class="small-text">
+						<p class="description" style="margin:4px 0 0">
+							La classifica si ordina da s&eacute;: prima i punti, poi la differenza reti, poi le reti fatte.
+							Questo numero serve solo a decidere fra squadre che hanno <strong>tutti e tre</strong> uguali.
+						</p>
+					</td></tr>
 					<tr><th><label>Squadra</label></th><td><input type="text" name="team" value="<?php echo $edit ? esc_attr( $edit->team ) : ''; ?>" class="regular-text" required>
 						<label style="margin-left:10px"><input type="checkbox" name="ours" <?php echo $edit && $edit->ours ? 'checked' : ''; ?>> è il Calcio Pieris (evidenzia)</label></td></tr>
 					<tr><th><label>PG / V / N / P</label></th><td>
@@ -992,10 +1024,15 @@ JS;
 		$titolo = ( self::COPPA === $comp ) ? 'Classifica del girone' : 'Classifica';
 		$h  = '<h3>' . esc_html( $titolo ) . '</h3><div style="overflow-x:auto"><table class="cp-table"><thead><tr>';
 		$h .= '<th>#</th><th style="text-align:left">Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>';
+		/* Il numero mostrato e' la posizione RISULTANTE dall'ordinamento, non il
+		   campo "pos" scritto a mano: mostrare quello significherebbe stampare
+		   una numerazione che contraddice l'ordine delle righe sotto. */
+		$posizione = 0;
 		foreach ( $rows as $r ) {
+			$posizione++;
 			$dr = intval( $r->gf ) - intval( $r->gs );
 			$h .= '<tr class="' . ( $r->ours ? 'cp-ours' : '' ) . '">';
-			$h .= '<td>' . intval( $r->pos ) . '</td><td class="cp-team">' . esc_html( $r->team ) . '</td>';
+			$h .= '<td>' . $posizione . '</td><td class="cp-team">' . esc_html( $r->team ) . '</td>';
 			$h .= '<td>' . intval( $r->pg ) . '</td><td>' . intval( $r->v ) . '</td><td>' . intval( $r->n ) . '</td><td>' . intval( $r->p ) . '</td>';
 			$h .= '<td>' . intval( $r->gf ) . '</td><td>' . intval( $r->gs ) . '</td><td>' . ( $dr > 0 ? '+' : '' ) . $dr . '</td><td><strong>' . intval( $r->pts ) . '</strong></td></tr>';
 		}
