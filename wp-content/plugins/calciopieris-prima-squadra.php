@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
  * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
- * Version: 1.3
+ * Version: 1.4
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -139,6 +139,38 @@ class CP_Prima_Squadra {
 	 * Serve a non mostrare il selettore quando non c'e' niente da selezionare: una
 	 * stagione senza coppa deve restare identica a com'era prima.
 	 */
+	/**
+	 * Una competizione ha qualcosa da mostrare?
+	 *
+	 * "Qualcosa" vuol dire una classifica oppure almeno una partita GIA' GIOCATA.
+	 * Le partite in calendario non contano: un elenco di gare future non dice
+	 * come sta andando, e non basta a far scegliere quella scheda.
+	 */
+	public static function ha_dati( $season_id, $comp ) {
+		if ( self::standings( $season_id, $comp ) ) { return true; }
+		foreach ( self::matches( $season_id, $comp ) as $m ) {
+			if ( null !== $m->home_goals && null !== $m->away_goals ) { return true; }
+		}
+		return false;
+	}
+
+	/**
+	 * Quale scheda mostrare aprendo la stagione.
+	 *
+	 * Di norma il campionato: e' la competizione che si segue tutto l'anno. Ma a
+	 * inizio stagione capita che il campionato non sia ancora cominciato mentre
+	 * la coppa e' gia' in corso, e aprire su una scheda vuota fa pensare a un
+	 * sito rotto. In quel caso - e SOLO in quello - si apre sulla coppa.
+	 *
+	 * Se non ha dati nessuna delle due si resta sul campionato: fra due schede
+	 * vuote e' quella che il visitatore si aspetta.
+	 */
+	public static function comp_iniziale( $season_id ) {
+		if ( self::ha_dati( $season_id, self::CAMPIONATO ) ) { return self::CAMPIONATO; }
+		if ( self::ha_dati( $season_id, self::COPPA ) ) { return self::COPPA; }
+		return self::CAMPIONATO;
+	}
+
 	public static function has_coppa( $season_id ) {
 		global $wpdb;
 		$m = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::t( 'matches' ) . ' WHERE season_id=%d AND comp=%s', $season_id, self::COPPA ) );
@@ -915,9 +947,13 @@ JS;
 
 		$comps = array( self::CAMPIONATO, self::COPPA );
 
+		/* Le schede restano nell'ordine di sempre - prima il campionato - ma quella
+		   APERTA non e' per forza la prima: vedi comp_iniziale(). */
+		$iniziale = self::comp_iniziale( $s->id );
+
 		$out .= '<div class="cp-comp" role="tablist" aria-label="Competizione">';
 		foreach ( $comps as $i => $c ) {
-			$attivo = ( 0 === $i );
+			$attivo = ( $c === $iniziale );
 			$out .= '<button type="button" class="cp-comp__btn' . ( $attivo ? ' is-on' : '' ) . '"'
 				. ' role="tab" aria-selected="' . ( $attivo ? 'true' : 'false' ) . '"'
 				. ' data-cp-target="' . esc_attr( $c ) . '">'
@@ -926,8 +962,8 @@ JS;
 		}
 		$out .= '</div>';
 
-		foreach ( $comps as $i => $c ) {
-			$out .= '<div class="cp-comp__pane" data-cp-pane="' . esc_attr( $c ) . '"' . ( 0 === $i ? '' : ' hidden' ) . '>';
+		foreach ( $comps as $c ) {
+			$out .= '<div class="cp-comp__pane" data-cp-pane="' . esc_attr( $c ) . '"' . ( $c === $iniziale ? '' : ' hidden' ) . '>';
 			/* Nella coppa la classifica si mostra solo se esiste davvero: molte coppe
 			   si giocano a eliminazione diretta, e una tabella vuota farebbe pensare a
 			   dati mancanti invece che a una competizione senza girone. */
@@ -974,16 +1010,19 @@ JS;
 		foreach ( $rows as $m ) {
 			if ( null !== $m->home_goals && null !== $m->away_goals ) { $played[] = $m; } else { $todo[] = $m; }
 		}
+		/* Prima i risultati, poi le prossime partite. Chi apre la pagina il lunedi'
+		   cerca com'e' finita domenica, non quando si torna in campo: la domanda
+		   piu' frequente va in cima. */
 		$out = '';
-		if ( ! empty( $todo ) ) {
-			$out .= '<h3>Prossime partite</h3><ul class="cp-cal">';
-			foreach ( $todo as $m ) { $out .= self::match_li( $m, false ); }
-			$out .= '</ul>';
-		}
 		if ( ! empty( $played ) ) {
 			$played = array_reverse( $played ); // più recenti prima
 			$out .= '<h3>Risultati</h3><ul class="cp-cal">';
 			foreach ( $played as $m ) { $out .= self::match_li( $m, true ); }
+			$out .= '</ul>';
+		}
+		if ( ! empty( $todo ) ) {
+			$out .= '<h3>Prossime partite</h3><ul class="cp-cal">';
+			foreach ( $todo as $m ) { $out .= self::match_li( $m, false ); }
 			$out .= '</ul>';
 		}
 		return $out;
