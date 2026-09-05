@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
  * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
- * Version: 1.5
+ * Version: 1.6
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -69,7 +69,7 @@ class CP_Prima_Squadra {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			season_id BIGINT UNSIGNED NOT NULL,
 			comp VARCHAR(20) NOT NULL DEFAULT 'campionato',
-			pos INT NOT NULL DEFAULT 0,
+			pos INT NOT NULL DEFAULT 0,   -- non piu' usata: la posizione si calcola (vedi standings())
 			team VARCHAR(120) NOT NULL DEFAULT '',
 			pg INT NOT NULL DEFAULT 0,
 			v INT NOT NULL DEFAULT 0,
@@ -124,13 +124,17 @@ class CP_Prima_Squadra {
 	 * Prima i PUNTI, poi la DIFFERENZA RETI, poi le RETI FATTE. E' l'ordine
 	 * riconosciuto ovunque, ed e' quello che il visitatore si aspetta.
 	 *
-	 * Prima si ordinava per il campo "pos", cioe' per il numero scritto a mano
-	 * al momento dell'inserimento: correggere i punti dal pannello non spostava
-	 * la squadra, e la tabella mostrava una classifica che i suoi stessi numeri
-	 * smentivano. Adesso "pos" conta solo come ULTIMA voce, quando punti,
-	 * differenza reti e reti fatte sono tutti uguali: li' nessun criterio
-	 * sportivo decide piu' niente, e l'ordine pubblicato dalla federazione e'
-	 * l'ipotesi migliore. Il nome chiude, perche' l'ordine non dipenda dal caso.
+	 * La posizione NON si inserisce piu' da nessuna parte: si ricava da questi
+	 * numeri. Un campo da compilare a mano era un dato che poteva contraddire
+	 * gli altri, e quando due dati litigano vince sempre quello sbagliato.
+	 *
+	 * Quando punti, differenza reti e reti fatte sono tutti uguali - il girone
+	 * che non e' ancora cominciato, dove sono tutti a zero - nessun criterio
+	 * sportivo decide piu' niente. Allora conta l'ORDINE DI INSERIMENTO, che e'
+	 * l'ordine del foglio caricato, cioe' l'elenco pubblicato dalla
+	 * federazione. E' un'informazione che si ha gia' e non va chiesta a
+	 * nessuno; ed essendo l'id univoco, l'ordine e' sempre lo stesso a ogni
+	 * caricamento della pagina.
 	 *
 	 * NOTA: nei campionati dilettanti italiani, a parita' di punti conta prima
 	 * la classifica avulsa (gli scontri diretti). Non si applica qui perche'
@@ -142,7 +146,7 @@ class CP_Prima_Squadra {
 		global $wpdb;
 		return $wpdb->get_results( $wpdb->prepare(
 			'SELECT * FROM ' . self::t( 'standings' ) . ' WHERE season_id=%d AND comp=%s'
-			. ' ORDER BY pts DESC, (gf-gs) DESC, gf DESC, pos ASC, team ASC',
+			. ' ORDER BY pts DESC, (gf-gs) DESC, gf DESC, id ASC',
 			$season_id, $comp ) );
 	}
 
@@ -282,17 +286,15 @@ class CP_Prima_Squadra {
 		$table = self::t( 'standings' );
 		// lo svuotamento tocca solo la competizione in cui si sta importando
 		if ( $wipe ) { $wpdb->delete( $table, array( 'season_id' => $season, 'comp' => $comp ) ); }
-		$n = 0; $auto = 0;
+		$n = 0;
 		foreach ( self::read_csv( $tmp ) as $r ) {
 			$team = self::pick( $r, array( 'squadra', 'team' ) );
 			if ( '' === $team ) { continue; }
-			$auto++;
 			$ours = self::pick( $r, array( 'noi', 'pieris' ), '' );
 			$is_ours = ( in_array( strtolower( $ours ), array( '1', 'si', 'sì', 'x', 'true', 'yes' ), true ) || stripos( $team, 'pieris' ) !== false ) ? 1 : 0;
 			$wpdb->insert( $table, array(
 				'season_id' => $season,
 				'comp' => $comp,
-				'pos'  => intval( self::pick( $r, array( 'pos', 'posizione' ), $auto ) ),
 				'team' => sanitize_text_field( $team ),
 				'pg'   => intval( self::pick( $r, array( 'pg', 'giocate', 'partite' ), 0 ) ),
 				'v'    => intval( self::pick( $r, array( 'v', 'vinte' ), 0 ) ),
@@ -574,7 +576,6 @@ class CP_Prima_Squadra {
 			$data = array(
 				'season_id' => $season,
 				'comp' => $comp,
-				'pos'  => intval( $_POST['pos'] ),
 				'team' => sanitize_text_field( wp_unslash( $_POST['team'] ) ),
 				'pg'   => intval( $_POST['pg'] ),
 				'v'    => intval( $_POST['v'] ),
@@ -616,9 +617,9 @@ class CP_Prima_Squadra {
 				<?php if ( empty( $rows ) ) : ?><tr><td colspan="11">Nessuna riga di <?php echo esc_html( self::comp_nome( $comp ) ); ?> per questa stagione.</td></tr>
 				<?php else : $cp_pos = 0; foreach ( $rows as $r ) : $cp_pos++; ?>
 					<tr>
-						<?php /* stessa numerazione calcolata che vede il visitatore: se qui si
-						         mostrasse il campo "pos" scritto a mano, il pannello e il sito
-						         direbbero due classifiche diverse */ ?>
+						<?php /* stessa numerazione calcolata che vede il visitatore: qui e sul
+						         sito la classifica e' la stessa, e nessuno la deve piu' numerare
+						         a mano */ ?>
 						<td><?php echo $cp_pos; ?></td><td><strong><?php echo esc_html( $r->team ); ?></strong></td>
 						<td><?php echo intval( $r->pg ); ?></td><td><?php echo intval( $r->v ); ?></td><td><?php echo intval( $r->n ); ?></td><td><?php echo intval( $r->p ); ?></td>
 						<td><?php echo intval( $r->gf ); ?></td><td><?php echo intval( $r->gs ); ?></td><td><strong><?php echo intval( $r->pts ); ?></strong></td>
@@ -638,13 +639,6 @@ class CP_Prima_Squadra {
 				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
 				<input type="hidden" name="edit_id" value="<?php echo $edit ? intval( $edit->id ) : 0; ?>">
 				<table class="form-table">
-					<tr><th><label>Posizione</label></th><td>
-						<input type="number" name="pos" value="<?php echo $edit ? intval( $edit->pos ) : count( $rows ) + 1; ?>" class="small-text">
-						<p class="description" style="margin:4px 0 0">
-							La classifica si ordina da s&eacute;: prima i punti, poi la differenza reti, poi le reti fatte.
-							Questo numero serve solo a decidere fra squadre che hanno <strong>tutti e tre</strong> uguali.
-						</p>
-					</td></tr>
 					<tr><th><label>Squadra</label></th><td><input type="text" name="team" value="<?php echo $edit ? esc_attr( $edit->team ) : ''; ?>" class="regular-text" required>
 						<label style="margin-left:10px"><input type="checkbox" name="ours" <?php echo $edit && $edit->ours ? 'checked' : ''; ?>> è il Calcio Pieris (evidenzia)</label></td></tr>
 					<tr><th><label>PG / V / N / P</label></th><td>
@@ -665,7 +659,7 @@ class CP_Prima_Squadra {
 
 			<hr style="margin:28px 0">
 			<h2>Importa classifica da CSV</h2>
-			<p class="description">Colonne accettate (con intestazione, separatore <code>,</code> o <code>;</code>): <code>pos, squadra, pg, v, n, p, gf, gs, punti, noi</code>. La colonna <code>noi</code> (valori <code>si</code>/<code>1</code>) evidenzia la riga del Pieris; se manca, viene evidenziata automaticamente la squadra che contiene "Pieris". Se <code>pos</code> manca, viene usato l'ordine delle righe.</p>
+			<p class="description">Colonne accettate (con intestazione, separatore <code>,</code> o <code>;</code>): <code>squadra, pg, v, n, p, gf, gs, punti, noi</code>. La colonna <code>noi</code> (valori <code>si</code>/<code>1</code>) evidenzia la riga del Pieris; se manca, viene evidenziata automaticamente la squadra che contiene "Pieris". Una eventuale colonna <code>pos</code> viene ignorata: la posizione la calcola il sito dai punti, dalla differenza reti e dalle reti fatte. L'ordine delle righe del foglio viene conservato e decide solo fra squadre che hanno quei tre valori tutti uguali, come in un girone non ancora cominciato.</p>
 			<form method="post" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'cpps_import_s' ); ?>
 				<input type="hidden" name="c" value="<?php echo esc_attr( $comp ); ?>">
@@ -1024,9 +1018,8 @@ JS;
 		$titolo = ( self::COPPA === $comp ) ? 'Classifica del girone' : 'Classifica';
 		$h  = '<h3>' . esc_html( $titolo ) . '</h3><div style="overflow-x:auto"><table class="cp-table"><thead><tr>';
 		$h .= '<th>#</th><th style="text-align:left">Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>';
-		/* Il numero mostrato e' la posizione RISULTANTE dall'ordinamento, non il
-		   campo "pos" scritto a mano: mostrare quello significherebbe stampare
-		   una numerazione che contraddice l'ordine delle righe sotto. */
+		/* Il numero mostrato e' la posizione RISULTANTE dall'ordinamento: la
+		   classifica si numera da se', e nessun campo puo' contraddirla. */
 		$posizione = 0;
 		foreach ( $rows as $r ) {
 			$posizione++;
