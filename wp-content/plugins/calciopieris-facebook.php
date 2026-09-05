@@ -38,9 +38,10 @@ class CP_Facebook {
 	const OPZ_APP   = 'cp_fb_app';   // identificativo e segreto dell'applicazione
 	const OPZ_TOKEN = 'cp_fb_token'; // token della Pagina
 
-	const OPZ_CONF  = 'cp_fb_configurazione';
-	const OPZ_POST  = 'cp_fb_post';
-	const OPZ_STATO = 'cp_fb_stato';
+	const OPZ_CONF     = 'cp_fb_configurazione';
+	const OPZ_POST     = 'cp_fb_post';
+	const OPZ_STATO    = 'cp_fb_stato';
+	const OPZ_DIAGNOSI = 'cp_fb_diagnosi';
 
 	const EVENTO   = 'cp_fb_aggiorna';
 	const CARTELLA = 'pieris-facebook';
@@ -193,9 +194,11 @@ class CP_Facebook {
 		delete_transient( 'cp_fb_stato_login' );
 
 		$app = self::app();
+		update_option( self::OPZ_DIAGNOSI, array( 'quando' => time(), 'passo' => 'ritorno', 'errore' => '', 'permessi' => array(), 'pagine' => -1 ), false );
 
 		/* 1. il codice usa e getta diventa un token dell'utente, che pero' dura
 		      un'ora scarsa */
+		self::passo( 'scambio del codice' );
 		$breve = self::chiedi( 'oauth/access_token', array(
 			'client_id'     => $app['id'],
 			'client_secret' => $app['segreto'],
@@ -218,15 +221,43 @@ class CP_Facebook {
 			? $lungo['access_token']
 			: $breve['access_token'];
 
+		/* 2-bis. che cosa ci e' stato concesso DAVVERO.
+		   Non serve al collegamento, serve a capirlo quando non riesce: se
+		   l'elenco delle Pagine torna vuoto, la differenza fra "questa utenza
+		   non amministra Pagine" e "il permesso di elencarle non e' stato dato"
+		   sta tutta qui, e senza si tira a indovinare. */
+		self::passo( 'permessi concessi' );
+		$perm     = self::chiedi( 'me/permissions', array( 'access_token' => $token_utente ) );
+		$concessi = array();
+		if ( ! is_string( $perm ) && ! empty( $perm['data'] ) ) {
+			foreach ( $perm['data'] as $p ) {
+				if ( isset( $p['permission'] ) && isset( $p['status'] ) && 'granted' === $p['status'] ) {
+					$concessi[] = $p['permission'];
+				}
+			}
+		}
+		self::passo( 'permessi concessi', array( 'permessi' => $concessi ) );
+
 		/* 3. le Pagine che l'utenza amministra, ciascuna con il proprio token */
+		self::passo( 'elenco delle Pagine' );
 		$pagine = self::chiedi( 'me/accounts', array(
 			'fields'       => 'id,name,access_token',
 			'limit'        => 100,
 			'access_token' => $token_utente,
 		) );
 		if ( is_string( $pagine ) ) { self::torna( 'errore', $pagine ); }
+		self::passo( 'elenco delle Pagine', array( 'pagine' => isset( $pagine['data'] ) ? count( $pagine['data'] ) : 0 ) );
+
 		if ( empty( $pagine['data'] ) ) {
-			self::torna( 'errore', 'Questa utenza non amministra nessuna Pagina, oppure non ha concesso il permesso di elencarle.' );
+			/* Il perche' cambia il rimedio, quindi lo si dice invece di dare un
+			   messaggio buono per tutto. */
+			if ( ! in_array( 'pages_show_list', $concessi, true ) ) {
+				self::torna( 'errore', 'Facebook non ha concesso il permesso <code>pages_show_list</code>, quindi le Pagine non si possono nemmeno elencare. '
+					. 'Succede quando l&rsquo;applicazione usa <em>Facebook Login for Business</em>: in quel caso i permessi non si chiedono per nome e '
+					. 'va compilato il campo <strong>ID configurazione</strong> qui sopra. '
+					. ( $concessi ? 'Concessi invece: ' . esc_html( implode( ', ', $concessi ) ) . '.' : 'Non e&rsquo; stato concesso nessun permesso.' ) );
+			}
+			self::torna( 'errore', 'Il permesso di elencare le Pagine c&rsquo;&egrave;, ma questa utenza non ne amministra nessuna.' );
 		}
 
 		$elenco = array();
@@ -312,11 +343,46 @@ class CP_Facebook {
 		return $dati;
 	}
 
-	/** Torna al pannello con un messaggio, senza lasciare il codice nell'indirizzo. */
+	/**
+	 * Torna al pannello con un messaggio, senza lasciare il codice nell'indirizzo.
+	 *
+	 * Gli ERRORI si scrivono anche in un'opzione, non solo nel messaggio che
+	 * dura un minuto: un collegamento che fallisce lo si scopre riaprendo il
+	 * pannello mezz'ora dopo, e un messaggio gia' svanito lascia davanti a un
+	 * "Nessuna Pagina collegata" che non spiega niente.
+	 */
 	private static function torna( $tipo, $messaggio ) {
+		if ( 'errore' === $tipo ) {
+			$d            = self::diagnosi();
+			$d['quando']  = time();
+			$d['errore']  = $messaggio;
+			update_option( self::OPZ_DIAGNOSI, $d, false );
+		} elseif ( 'ok' === $tipo ) {
+			delete_option( self::OPZ_DIAGNOSI );
+		}
 		set_transient( 'cp_fb_messaggio', array( 'tipo' => $tipo, 'testo' => $messaggio ), 60 );
 		wp_safe_redirect( admin_url( 'admin.php?page=cp-facebook' ) );
 		exit;
+	}
+
+	/** Quello che si e' capito dell'ultimo tentativo di collegamento. */
+	public static function diagnosi() {
+		$d = get_option( self::OPZ_DIAGNOSI, array() );
+		return wp_parse_args( is_array( $d ) ? $d : array(), array(
+			'quando'   => 0,
+			'passo'    => '',
+			'errore'   => '',
+			'permessi' => array(),
+			'pagine'   => -1,
+		) );
+	}
+
+	/** Segna a che punto si e' arrivati, per poterlo dire nel pannello. */
+	private static function passo( $nome, $extra = array() ) {
+		$d          = self::diagnosi();
+		$d['passo'] = $nome;
+		foreach ( $extra as $k => $v ) { $d[ $k ] = $v; }
+		update_option( self::OPZ_DIAGNOSI, $d, false );
 	}
 
 	/* ===================== scarico dei post ===================== */
@@ -784,6 +850,33 @@ class CP_Facebook {
 				</p>
 			<?php else : ?>
 				<p>Nessuna Pagina collegata.</p>
+
+				<?php
+				/* Se l'ultimo tentativo e' andato male lo si dice QUI, dove si
+				   sta guardando, e non in un avviso svanito da un pezzo. */
+				$dg = self::diagnosi();
+				if ( $dg['quando'] ) : ?>
+				<div class="notice notice-error inline" style="margin:12px 0;padding:10px 14px">
+					<p style="margin-top:0"><strong>L&rsquo;ultimo tentativo non &egrave; riuscito</strong>
+						&mdash; <?php echo esc_html( wp_date( 'd/m/Y H:i', $dg['quando'] ) ); ?></p>
+					<?php if ( $dg['errore'] ) : ?>
+						<p><?php echo wp_kses_post( $dg['errore'] ); ?></p>
+					<?php endif; ?>
+					<p style="margin-bottom:0"><em>
+						Si &egrave; fermato al passo: <strong><?php echo esc_html( $dg['passo'] ? $dg['passo'] : 'sconosciuto' ); ?></strong>.
+						<?php if ( $dg['permessi'] ) : ?>
+							Permessi concessi da Facebook: <code><?php echo esc_html( implode( ', ', $dg['permessi'] ) ); ?></code>.
+						<?php elseif ( in_array( $dg['passo'], array( 'permessi concessi', 'elenco delle Pagine' ), true ) ) : ?>
+							<?php /* lo si dice solo se a quel punto i permessi erano gia' stati chiesti:
+							         prima non e' un'assenza, e' una domanda non ancora fatta */ ?>
+							Facebook non ha concesso <strong>nessun</strong> permesso.
+						<?php endif; ?>
+						<?php if ( $dg['pagine'] >= 0 ) : ?>
+							Pagine trovate: <strong><?php echo (int) $dg['pagine']; ?></strong>.
+						<?php endif; ?>
+					</em></p>
+				</div>
+				<?php endif; ?>
 				<p>
 					<?php if ( $app['id'] && $app['segreto'] ) : ?>
 						<?php self::bottone( 'cp_fb_connetti', 'Connetti con Facebook', 'button button-primary' ); ?>
