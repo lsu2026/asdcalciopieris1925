@@ -176,6 +176,14 @@ class CP_Facebook {
 			$parametri['override_default_response_type'] = 'true';
 		} else {
 			$parametri['scope'] = self::PERMESSI;
+
+			/* Si chiede a Facebook di RIFARE la domanda anche quando ritiene
+			   l'applicazione gia' autorizzata. Senza, chi ha gia' concesso i
+			   permessi una volta viene rimandato indietro senza vedere niente:
+			   un permesso aggiunto dopo - o rifiutato la prima volta - non
+			   verrebbe mai concesso, e il pannello direbbe che manca senza che
+			   ci sia modo di darlo. */
+			$parametri['auth_type'] = 'rerequest';
 		}
 
 		$url = 'https://www.facebook.com/' . self::API . '/dialog/oauth?' . http_build_query( $parametri );
