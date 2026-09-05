@@ -49,8 +49,22 @@ class CP_Facebook {
 	/** Versione del Graph API con cui e' stato provato. */
 	const API = 'v21.0';
 
-	/** I permessi chiesti al momento del login: elencare le Pagine e leggerne i post. */
-	const PERMESSI = 'pages_show_list,pages_read_engagement';
+	/**
+	 * I permessi chiesti al momento del login.
+	 *
+	 * I primi due sono quelli che servono: elencare le Pagine e leggerne i post.
+	 *
+	 * Il terzo sembra di troppo e invece e' indispensabile. Quando il ruolo
+	 * sulla Pagina non e' stato dato alla persona ma le arriva da un PORTFOLIO
+	 * AZIENDALE - il Business Manager - la chiamata /me/accounts restituisce un
+	 * elenco VUOTO senza business_management, pur essendo pages_show_list
+	 * concesso e pur essendo quella persona amministratore pieno della Pagina.
+	 * Da fuori sembra che i permessi manchino; in realta' manca il permesso di
+	 * vedere le Pagine passando dall'azienda. Verificato sul campo il
+	 * 2026-09-05: permessi concessi pages_show_list e pages_read_engagement,
+	 * Pagine trovate zero.
+	 */
+	const PERMESSI = 'pages_show_list,pages_read_engagement,business_management';
 
 	/** Oltre questa lunghezza la prima riga non fa piu' da titolo. */
 	const TITOLO_MAX = 90;
@@ -257,7 +271,12 @@ class CP_Facebook {
 					. 'va compilato il campo <strong>ID configurazione</strong> qui sopra. '
 					. ( $concessi ? 'Concessi invece: ' . esc_html( implode( ', ', $concessi ) ) . '.' : 'Non e&rsquo; stato concesso nessun permesso.' ) );
 			}
-			self::torna( 'errore', 'Il permesso di elencare le Pagine c&rsquo;&egrave;, ma questa utenza non ne amministra nessuna.' );
+			if ( ! in_array( 'business_management', $concessi, true ) ) {
+				self::torna( 'errore', 'Facebook dice che questa utenza non amministra nessuna Pagina, ma il permesso <code>business_management</code> non &egrave; stato concesso: '
+					. 'quando il ruolo sulla Pagina arriva da un <strong>portfolio aziendale</strong>, senza quel permesso l&rsquo;elenco torna vuoto anche se sei amministratore pieno. '
+					. 'Aggiungi <code>business_management</code> ai permessi dell&rsquo;applicazione su Facebook e riprova a collegarti.' );
+			}
+			self::torna( 'errore', 'Il permesso di elencare le Pagine c&rsquo;&egrave;, anche passando dall&rsquo;azienda, ma non risulta nessuna Pagina amministrata da questa utenza.' );
 		}
 
 		$elenco = array();
