@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.6.0
+Version: 1.6.1
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -296,6 +296,23 @@ a:hover { color: var(--oro); }
 .news-card h3 { font-size: 1.3rem; margin-bottom: 8px; }
 .news-card h3 a { color: var(--granata); }
 .news-card p { font-size: .95rem; color: #555; flex: 1; }
+/* ---------- News: il titolo dei post presi da Facebook ----------
+   Un post di Facebook un titolo non ce l'ha: quello che si vede e' la sua
+   prima riga, cioe' una frase di testo. Vestirla da titolone - condensato,
+   granata, grosso - le da' un'enfasi che non ha, e nel carosello, accanto
+   alle news scritte a mano, urlava. Piu' piccolo, di peso normale e nel nero
+   del testo del sito: si legge per quello che e'.
+   Il nero e' --antracite, lo stesso di tutto il resto della pagina: un #000
+   pieno stonerebbe accanto a ogni altra riga di testo. */
+.news-card--facebook h3 {
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--antracite);
+  letter-spacing: 0;
+}
+.news-card--facebook h3 a { color: var(--antracite); font-weight: 400; }
+.news-card--facebook h3 a:hover { color: var(--granata); }
+
 .news-card .leggi {
   font-family: var(--font-display);
   font-weight: 700;
