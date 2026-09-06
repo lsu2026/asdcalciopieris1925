@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.6.1
+Version: 1.6.2
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -296,6 +296,43 @@ a:hover { color: var(--oro); }
 .news-card h3 { font-size: 1.3rem; margin-bottom: 8px; }
 .news-card h3 a { color: var(--granata); }
 .news-card p { font-size: .95rem; color: #555; flex: 1; }
+/* ---------- News: le foto di un post con piu' immagini ----------
+   Come le mostra Facebook: una grande sopra, e sotto la striscia delle altre,
+   da scorrere in orizzontale e da toccare per portarle sopra. La striscia
+   compare solo quando le foto sono piu' di una.
+   Le anteprime sono pulsanti veri, non immagini cliccabili: si raggiungono con
+   il tasto di tabulazione e rispondono a Invio. */
+.cp-fb-strisc {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 10px 0;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.cp-fb-strisc::-webkit-scrollbar { height: 6px; }
+.cp-fb-strisc::-webkit-scrollbar-thumb { background: rgba(214,170,99,.55); border-radius: 3px; }
+
+.cp-fb-mini {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  opacity: .62;
+  transition: opacity .15s, border-color .15s;
+}
+.cp-fb-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-fb-mini:hover,
+.cp-fb-mini:focus-visible { opacity: 1; }
+/* quella che si sta guardando: bordo oro e piena opacita', cosi' si sa
+   sempre quale delle anteprime e' finita sopra */
+.cp-fb-mini.is-on { opacity: 1; border-color: var(--oro); }
+
 /* ---------- News: il titolo dei post presi da Facebook ----------
    Un post di Facebook un titolo non ce l'ha: quello che si vede e' la sua
    prima riga, cioe' una frase di testo. Vestirla da titolone - condensato,

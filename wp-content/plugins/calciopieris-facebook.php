@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Post da Facebook
  * Description: Ci si collega con l'utenza Facebook che amministra la Pagina, si sceglie la Pagina e da quel momento il sito scarica da solo gli ultimi post, foto comprese, e li mostra con la stessa veste delle news. Nasce per sostituire Smash Balloon, che sull'hosting del sito non puo' girare.
- * Version: 1.0
+ * Version: 1.1
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -72,8 +72,17 @@ class CP_Facebook {
 	/** Oltre questa larghezza le foto vengono rimpicciolite. */
 	const LARGHEZZA_MAX = 1200;
 
+	/** Larghezza delle anteprime della striscia sotto la foto grande. */
+	const LARGHEZZA_MINI = 240;
+
+	/** Quante foto tenere al massimo di un solo post: gli album lunghi si tagliano. */
+	const FOTO_PER_POST = 10;
+
 	/** Quante immagini al massimo scaricare in una sola passata. */
-	const IMMAGINI_PER_GIRO = 6;
+	const IMMAGINI_PER_GIRO = 10;
+
+	/** Diventa vero quando in pagina c'e' almeno una galleria: il codice si stampa solo allora. */
+	private static $c_e_galleria = false;
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
@@ -86,6 +95,7 @@ class CP_Facebook {
 		add_action( self::EVENTO, array( __CLASS__, 'scarica' ) );
 		add_shortcode( 'post_facebook', array( __CLASS__, 'shortcode' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'aggiungi_cadenze' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'js_galleria' ) );
 		add_action( 'init', array( __CLASS__, 'programma' ) );
 	}
 
@@ -493,9 +503,11 @@ class CP_Facebook {
 		$cartella = trailingslashit( self::cartella()['via'] );
 		$gia      = array();
 		foreach ( self::post() as $v ) {
-			if ( ! empty( $v['file'] ) && file_exists( $cartella . $v['file'] ) ) {
-				$gia[ $v['id'] ] = $v['file'];
+			$tenute = array();
+			foreach ( self::foto_di( $v ) as $f ) {
+				if ( ! empty( $f['grande'] ) && file_exists( $cartella . $f['grande'] ) ) { $tenute[] = $f; }
 			}
+			if ( $tenute ) { $gia[ $v['id'] ] = $tenute; }
 		}
 
 		$post = array();
@@ -519,29 +531,41 @@ class CP_Facebook {
 				'sommario' => $sommario,
 				'data'     => isset( $p['created_time'] ) ? strtotime( $p['created_time'] ) : 0,
 				'link'     => isset( $p['permalink_url'] ) ? esc_url_raw( $p['permalink_url'] ) : '',
-				'remota'   => self::immagine_remota( $p ),
-				'file'     => isset( $gia[ $p['id'] ] ) ? $gia[ $p['id'] ] : '',
+				'remote'   => self::immagini_remote( $p ),
+				'foto'     => isset( $gia[ $p['id'] ] ) ? $gia[ $p['id'] ] : array(),
 			);
 		}
 
 		update_option( self::OPZ_POST, $post, false );
 
+		/* Le foto si scaricano poche per volta, e il conto vale su TUTTO il
+		   giro: un album di dieci foto non deve mangiarsi il tempo che serve
+		   agli altri post. Quelle che restano indietro le prende il giro dopo. */
 		$nuove = 0;
 		foreach ( $post as $i => $p ) {
 			if ( $nuove >= self::IMMAGINI_PER_GIRO ) { break; }
-			if ( '' === $p['remota'] || '' !== $p['file'] ) { continue; }
-			$file = self::scarica_immagine( $p['remota'], $p['id'] );
-			if ( $file ) {
-				$post[ $i ]['file'] = $file;
-				$nuove++;
+
+			$fatte = array();
+			foreach ( $p['foto'] as $f ) { if ( ! empty( $f['grande'] ) ) { $fatte[] = $f; } }
+
+			foreach ( $p['remote'] as $n => $url ) {
+				if ( isset( $fatte[ $n ] ) ) { continue; }             // gia' in casa
+				if ( $nuove >= self::IMMAGINI_PER_GIRO ) { break; }
+				$scaricata = self::scarica_immagine( $url, $p['id'], $n + 1 );
+				if ( $scaricata ) {
+					$fatte[ $n ] = $scaricata;
+					$nuove++;
+				}
 			}
+			ksort( $fatte );
+			$post[ $i ]['foto'] = array_values( $fatte );
 		}
 		if ( $nuove ) { update_option( self::OPZ_POST, $post, false ); }
 
 		self::fai_pulizia( $post );
 
 		$con_foto = 0;
-		foreach ( $post as $p ) { if ( ! empty( $p['file'] ) ) { $con_foto++; } }
+		foreach ( $post as $p ) { if ( ! empty( $p['foto'] ) ) { $con_foto++; } }
 
 		update_option( self::OPZ_STATO, array(
 			'ultimo_giro' => time(),
@@ -565,20 +589,42 @@ class CP_Facebook {
 	}
 
 	/**
-	 * L'indirizzo della foto del post, cercata dove Facebook la mette davvero.
+	 * TUTTI gli indirizzi delle foto del post, nell'ordine in cui stanno su
+	 * Facebook.
 	 *
-	 * full_picture e' la via breve; se manca si guarda nell'allegato, e negli
-	 * allegati dentro l'allegato per i post con piu' foto: si prende la prima.
+	 * Un post con piu' foto le mette negli "allegati dentro l'allegato"
+	 * (subattachments), e li' ci sono tutte. Si guarda prima li': full_picture
+	 * porterebbe soltanto quella di copertina, e di un album di otto foto se ne
+	 * mostrerebbe una sola.
+	 *
+	 * Se di subattachments non ce ne sono - il post con una foto sola - si
+	 * ripiega sull'allegato singolo e poi su full_picture.
+	 *
+	 * Si scartano i doppioni: la copertina compare spesso due volte.
 	 */
-	private static function immagine_remota( $p ) {
-		if ( ! empty( $p['full_picture'] ) ) { return esc_url_raw( $p['full_picture'] ); }
+	private static function immagini_remote( $p ) {
+		$urls = array();
 
 		$a = isset( $p['attachments']['data'][0] ) ? $p['attachments']['data'][0] : array();
-		if ( ! empty( $a['media']['image']['src'] ) ) { return esc_url_raw( $a['media']['image']['src'] ); }
-		if ( ! empty( $a['subattachments']['data'][0]['media']['image']['src'] ) ) {
-			return esc_url_raw( $a['subattachments']['data'][0]['media']['image']['src'] );
+
+		if ( ! empty( $a['subattachments']['data'] ) && is_array( $a['subattachments']['data'] ) ) {
+			foreach ( $a['subattachments']['data'] as $sub ) {
+				if ( ! empty( $sub['media']['image']['src'] ) ) {
+					$urls[] = esc_url_raw( $sub['media']['image']['src'] );
+				}
+			}
 		}
-		return '';
+
+		if ( ! $urls && ! empty( $a['media']['image']['src'] ) ) {
+			$urls[] = esc_url_raw( $a['media']['image']['src'] );
+		}
+		if ( ! $urls && ! empty( $p['full_picture'] ) ) {
+			$urls[] = esc_url_raw( $p['full_picture'] );
+		}
+
+		$urls = array_values( array_unique( array_filter( $urls ) ) );
+
+		return array_slice( $urls, 0, self::FOTO_PER_POST );
 	}
 
 	/**
@@ -645,26 +691,27 @@ class CP_Facebook {
 	 * Se il ridimensionamento non e' possibile - libreria grafica assente - si
 	 * tiene comunque l'originale: una foto pesante e' meglio di nessuna foto.
 	 */
-	private static function scarica_immagine( $url, $id ) {
+	private static function scarica_immagine( $url, $id, $numero ) {
 		$dir = self::cartella();
-		if ( ! wp_mkdir_p( $dir['via'] ) ) { return ''; }
+		if ( ! wp_mkdir_p( $dir['via'] ) ) { return array(); }
 
-		$nome = preg_replace( '/[^0-9_]/', '', $id ) . '.jpg';
+		$base = preg_replace( '/[^0-9_]/', '', $id ) . '-' . (int) $numero;
+		$nome = $base . '.jpg';
 		$via  = trailingslashit( $dir['via'] ) . $nome;
 
 		$r = wp_remote_get( $url, array( 'timeout' => 30 ) );
-		if ( is_wp_error( $r ) ) { return ''; }
-		if ( 200 !== (int) wp_remote_retrieve_response_code( $r ) ) { return ''; }
+		if ( is_wp_error( $r ) ) { return array(); }
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $r ) ) { return array(); }
 
 		$tipo = (string) wp_remote_retrieve_header( $r, 'content-type' );
-		if ( 0 !== strpos( $tipo, 'image/' ) ) { return ''; }
+		if ( 0 !== strpos( $tipo, 'image/' ) ) { return array(); }
 
 		$corpo = wp_remote_retrieve_body( $r );
-		if ( strlen( $corpo ) < 500 || strlen( $corpo ) > 8 * 1024 * 1024 ) { return ''; }
-		if ( ! file_put_contents( $via, $corpo ) ) { return ''; }
+		if ( strlen( $corpo ) < 500 || strlen( $corpo ) > 8 * 1024 * 1024 ) { return array(); }
+		if ( ! file_put_contents( $via, $corpo ) ) { return array(); }
 
 		/* controllo vero sul contenuto: l'intestazione dice quello che vuole */
-		if ( ! @getimagesize( $via ) ) { @unlink( $via ); return ''; }
+		if ( ! @getimagesize( $via ) ) { @unlink( $via ); return array(); }
 
 		$editore = wp_get_image_editor( $via );
 		if ( ! is_wp_error( $editore ) ) {
@@ -672,17 +719,60 @@ class CP_Facebook {
 			$editore->set_quality( 82 );
 			$editore->save( $via );
 		}
+		if ( ! file_exists( $via ) ) { return array(); }
 
-		return file_exists( $via ) ? $nome : '';
+		return array( 'grande' => $nome, 'mini' => self::fai_anteprima( $via, $base ) );
 	}
 
-	/** Toglie le copie locali dei post che non sono piu' nel feed. */
+	/**
+	 * L'anteprima piccola per la striscia sotto la foto grande.
+	 *
+	 * Serve perche' un post con otto foto, senza, farebbe scaricare al
+	 * visitatore otto immagini da 1200 pixel per mostrargliene sette larghe
+	 * cinquanta. Le anteprime pesano una decina di kilobyte l'una.
+	 *
+	 * Se non si riesce a farla non e' un guaio: chi stampa la striscia ripiega
+	 * sulla foto grande, che si vede lo stesso.
+	 */
+	private static function fai_anteprima( $via_grande, $base ) {
+		$nome = $base . 'm.jpg';
+		$via  = dirname( $via_grande ) . '/' . $nome;
+
+		$editore = wp_get_image_editor( $via_grande );
+		if ( is_wp_error( $editore ) ) { return ''; }
+
+		$editore->resize( self::LARGHEZZA_MINI, self::LARGHEZZA_MINI, true ); // ritagliata quadrata
+		$editore->set_quality( 72 );
+		$salvato = $editore->save( $via );
+
+		return ( ! is_wp_error( $salvato ) && file_exists( $via ) ) ? $nome : '';
+	}
+
+	/**
+	 * Le foto di un post, sempre nella stessa forma.
+	 *
+	 * I post messi da parte prima della galleria hanno un solo campo "file" e
+	 * nessuna anteprima. Invece di andarli a riscrivere si traducono qui al
+	 * volo: al primo giro automatico si aggiornano da soli.
+	 */
+	public static function foto_di( $p ) {
+		if ( ! empty( $p['foto'] ) && is_array( $p['foto'] ) ) { return $p['foto']; }
+		if ( ! empty( $p['file'] ) ) { return array( array( 'grande' => $p['file'], 'mini' => '' ) ); }
+		return array();
+	}
+
+	/** Toglie le copie locali che non servono piu' a nessun post. */
 	private static function fai_pulizia( $post ) {
 		$dir = self::cartella();
 		if ( ! is_dir( $dir['via'] ) ) { return; }
 
 		$vivi = array();
-		foreach ( $post as $p ) { if ( ! empty( $p['file'] ) ) { $vivi[ $p['file'] ] = true; } }
+		foreach ( $post as $p ) {
+			foreach ( self::foto_di( $p ) as $f ) {
+				if ( ! empty( $f['grande'] ) ) { $vivi[ $f['grande'] ] = true; }
+				if ( ! empty( $f['mini'] ) ) { $vivi[ $f['mini'] ] = true; }
+			}
+		}
 
 		foreach ( (array) glob( trailingslashit( $dir['via'] ) . '*.jpg' ) as $f ) {
 			if ( ! isset( $vivi[ basename( $f ) ] ) ) { @unlink( $f ); }
@@ -717,16 +807,7 @@ class CP_Facebook {
 			$a    = $link ? ' href="' . esc_url( $link ) . '" target="_blank" rel="noopener"' : '';
 
 			$html .= '<article class="card news-card news-card--facebook">';
-
-			/* la foto si mostra solo se il file c'e' per davvero: meglio una
-			   scheda di solo testo di un riquadro con l'immagine rotta */
-			if ( ! empty( $p['file'] ) && file_exists( trailingslashit( $dir['via'] ) . $p['file'] ) ) {
-				$src   = trailingslashit( $dir['web'] ) . $p['file'];
-				$html .= $link ? '<a class="news-thumb"' . $a . '>' : '<span class="news-thumb">';
-				$html .= '<img src="' . esc_url( $src ) . '" alt="' . esc_attr( $p['titolo'] ) . '" loading="lazy">';
-				$html .= $link ? '</a>' : '</span>';
-			}
-
+			$html .= self::galleria( $p, $link, $a, $dir );
 			$html .= '<div class="news-body">';
 			$html .= '<div class="news-meta">' . esc_html( self::data_scritta( $p['data'] ) ) . '</div>';
 			$html .= '<h3>' . ( $link ? '<a' . $a . '>' : '' ) . esc_html( $p['titolo'] ) . ( $link ? '</a>' : '' ) . '</h3>';
@@ -740,6 +821,89 @@ class CP_Facebook {
 		}
 
 		return $html;
+	}
+
+	/**
+	 * Le foto del post, come le mostra Facebook: una grande sopra e, se ce n'e'
+	 * piu' d'una, la striscia delle altre sotto, da scorrere e da toccare per
+	 * portarle sopra.
+	 *
+	 * La foto grande resta un collegamento al post, com'era prima: chi ci
+	 * clicca sopra si aspetta di andare su Facebook, non di sfogliare. A
+	 * sfogliare servono le anteprime, che sono pulsanti veri e non finte
+	 * immagini cliccabili, cosi' funzionano anche da tastiera.
+	 *
+	 * Si mostrano solo le foto che sul disco ci sono DAVVERO: un album a meta'
+	 * capita, perche' lo scarico procede poche foto per giro.
+	 */
+	private static function galleria( $p, $link, $a, $dir ) {
+		$via = trailingslashit( $dir['via'] );
+		$web = trailingslashit( $dir['web'] );
+
+		$foto = array();
+		foreach ( self::foto_di( $p ) as $f ) {
+			if ( ! empty( $f['grande'] ) && file_exists( $via . $f['grande'] ) ) { $foto[] = $f; }
+		}
+		if ( ! $foto ) { return ''; }
+
+		$alt    = esc_attr( $p['titolo'] );
+		$grande = $web . $foto[0]['grande'];
+
+		$out  = '<div class="cp-fb-foto">';
+		$out .= $link ? '<a class="news-thumb"' . $a . '>' : '<span class="news-thumb">';
+		$out .= '<img src="' . esc_url( $grande ) . '" alt="' . $alt . '" loading="lazy" data-cp-grande>';
+		$out .= $link ? '</a>' : '</span>';
+
+		if ( count( $foto ) > 1 ) {
+			$out .= '<div class="cp-fb-strisc" role="group" aria-label="Le altre foto del post">';
+			foreach ( $foto as $i => $f ) {
+				/* l'anteprima puo' mancare se il ridimensionamento non e'
+				   riuscito: in quel caso si usa la foto grande, che si vede
+				   uguale e costa solo qualche kilobyte in piu' */
+				$mini = ! empty( $f['mini'] ) && file_exists( $via . $f['mini'] ) ? $f['mini'] : $f['grande'];
+				$out .= '<button type="button" class="cp-fb-mini' . ( 0 === $i ? ' is-on' : '' ) . '"'
+					. ' data-cp-foto="' . esc_url( $web . $f['grande'] ) . '"'
+					. ' aria-label="Mostra la foto ' . ( $i + 1 ) . ' di ' . count( $foto ) . '">'
+					. '<img src="' . esc_url( $web . $mini ) . '" alt="" loading="lazy"></button>';
+			}
+			$out .= '</div>';
+			self::$c_e_galleria = true;
+		}
+
+		$out .= '</div>';
+		return $out;
+	}
+
+	/**
+	 * Il codice che cambia la foto grande quando si tocca un'anteprima.
+	 *
+	 * Si stampa UNA VOLTA SOLA e solo se in pagina c'e' almeno una galleria.
+	 * L'ascoltatore sta sul documento e non sui singoli pulsanti: le schede del
+	 * carosello vengono nascoste e rimostrate, e cosi' non c'e' niente da
+	 * riagganciare.
+	 */
+	public static function js_galleria() {
+		if ( ! self::$c_e_galleria ) { return; }
+		?>
+<script>
+(function () {
+	'use strict';
+	document.addEventListener('click', function (e) {
+		var b = e.target && e.target.closest ? e.target.closest('.cp-fb-mini') : null;
+		if (!b) { return; }
+		var box = b.closest('.cp-fb-foto');
+		if (!box) { return; }
+		var grande = box.querySelector('[data-cp-grande]');
+		var nuova = b.getAttribute('data-cp-foto');
+		if (grande && nuova) { grande.setAttribute('src', nuova); }
+		var tutti = box.querySelectorAll('.cp-fb-mini');
+		for (var i = 0; i < tutti.length; i++) {
+			if (tutti[i] === b) { tutti[i].classList.add('is-on'); } else { tutti[i].classList.remove('is-on'); }
+		}
+	});
+})();
+</script>
+		<?php
 	}
 
 	/** La data come la scrive WordPress nella lingua del sito. */
@@ -1048,9 +1212,18 @@ class CP_Facebook {
 						<td><?php echo esc_html( $p['data'] ? wp_date( 'd/m/Y', $p['data'] ) : '—' ); ?></td>
 						<td><?php echo esc_html( $p['titolo'] ); ?></td>
 						<td><?php
-							if ( ! empty( $p['file'] ) ) { echo 'scaricata'; }
-							elseif ( ! empty( $p['remota'] ) ) { echo '<em>in attesa</em>'; }
-							else { echo '—'; }
+							/* Si dice quante su quante, perche' un album si scarica poche
+							   foto per giro: "3 di 8" fa capire che sta lavorando, mentre
+							   un generico "scaricata" farebbe pensare a un album monco. */
+							$cp_fatte  = count( self::foto_di( $p ) );
+							$cp_volute = ! empty( $p['remote'] ) ? count( $p['remote'] ) : $cp_fatte;
+							if ( ! $cp_volute ) {
+								echo '—';
+							} elseif ( $cp_fatte >= $cp_volute ) {
+								echo esc_html( $cp_fatte . ' foto' );
+							} else {
+								echo '<em>' . esc_html( $cp_fatte . ' di ' . $cp_volute ) . '</em>';
+							}
 						?></td>
 					</tr>
 				<?php endforeach; ?>
