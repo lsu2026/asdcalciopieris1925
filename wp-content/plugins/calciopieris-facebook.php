@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Post da Facebook
  * Description: Ci si collega con l'utenza Facebook che amministra la Pagina, si sceglie la Pagina e da quel momento il sito scarica da solo gli ultimi post, foto comprese, e li mostra con la stessa veste delle news. Nasce per sostituire Smash Balloon, che sull'hosting del sito non puo' girare.
- * Version: 1.2
+ * Version: 1.3
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -49,6 +49,9 @@ class CP_Facebook {
 	/** Impedisce che due visite in contemporanea vadano a chiedere le stesse cose. */
 	const OPZ_LUCCHETTO   = 'cp_fb_lucchetto';
 	const LUCCHETTO_DURA  = 180;
+
+	/** Quando restano foto da prendere si torna dopo questi secondi, non alla cadenza intera. */
+	const RIPRESA_VELOCE = 30;
 
 	/** Versione del Graph API con cui e' stato provato. */
 	const API = 'v21.0';
@@ -139,14 +142,40 @@ class CP_Facebook {
 		add_action( 'shutdown', array( __CLASS__, 'giro_di_scorta' ), 99 );
 	}
 
-	/** Da quanto non si aggiorna, e quanto dovrebbe passare al massimo. */
+	/**
+	 * Va aggiornato adesso?
+	 *
+	 * Di norma si rispetta la cadenza scelta nel pannello. C'e' pero' un caso in
+	 * cui aspettarla e' sbagliato: quando di un post mancano ancora delle foto.
+	 * Ogni visita ne porta a casa poche - il tempo e' contato - e un album di
+	 * sette foto ci metterebbe tre cadenze intere a completarsi, cioe' un quarto
+	 * d'ora buono su un sito visitato di rado. Finche' c'e' lavoro arretrato si
+	 * torna quindi molto prima, senza pero' far pesare di piu' la singola visita.
+	 *
+	 * Il ritorno anticipato si spegne da solo: appena le foto sono tutte in casa
+	 * non c'e' piu' arretrato e vale di nuovo la sola cadenza.
+	 */
 	private static function in_ritardo() {
 		$cadenze = self::cadenze();
 		$conf    = self::conf();
 		$ogni    = isset( $cadenze[ $conf['cadenza'] ] ) ? $cadenze[ $conf['cadenza'] ]['secondi'] : 300;
 
 		$ultimo = (int) self::stato()['ultimo_giro'];
-		return ( 0 === $ultimo ) || ( ( time() - $ultimo ) >= $ogni );
+		if ( 0 === $ultimo ) { return true; }
+
+		$passato = time() - $ultimo;
+		if ( $passato >= $ogni ) { return true; }
+
+		return self::foto_in_attesa() && $passato >= self::RIPRESA_VELOCE;
+	}
+
+	/** C'e' qualche post di cui non abbiamo ancora tutte le foto? */
+	public static function foto_in_attesa() {
+		foreach ( self::post() as $p ) {
+			$volute = ! empty( $p['remote'] ) ? count( $p['remote'] ) : 0;
+			if ( $volute > count( self::foto_di( $p ) ) ) { return true; }
+		}
+		return false;
 	}
 
 	/**
@@ -177,10 +206,14 @@ class CP_Facebook {
 	 * secondi: un giro lungo non farebbe perdere l'aggiornamento, farebbe
 	 * troncare la pagina a un visitatore.
 	 *
-	 * Percio' qui si lavora con il cronometro: poche foto, attese di rete
-	 * corte, e uno stop netto passati dodici secondi. I testi arrivano subito -
-	 * e sono la cosa che conta - le foto si completano nelle visite successive.
-	 * Il pulsante "Aggiorna adesso" del pannello resta senza fretta: li' c'e'
+	 * Percio' si scaricano TUTTE le foto che ci stanno, ma con uno stop netto a
+	 * 45 secondi. Non e' un tetto al numero di foto - quello faceva impiegare a
+	 * un album di sette foto tre cadenze intere, cioe' un quarto d'ora - e' solo
+	 * il margine che tiene la richiesta sotto i 60 secondi del server. Quel che
+	 * eventualmente resta fuori lo prende la visita dopo, che arriva presto
+	 * perche' con foto arretrate si torna dopo mezzo minuto.
+	 *
+	 * Il pulsante "Aggiorna adesso" del pannello resta senza limiti: li' c'e'
 	 * un amministratore che ha scelto di aspettare.
 	 */
 	public static function giro_di_scorta() {
@@ -194,8 +227,10 @@ class CP_Facebook {
 		@set_time_limit( 120 ); // su InfinityFree e' disattivata: non ci si conta
 
 		self::scarica( array(
-			'immagini' => 3,
-			'entro'    => microtime( true ) + 12,
+			/* nessun tetto al numero: a fermare e' il tempo, non un conteggio */
+			'immagini' => PHP_INT_MAX,
+			'entro'    => microtime( true ) + 45,
+			/* una singola foto che non arriva non deve mangiarsi tutto il giro */
 			'attesa'   => 10,
 		) );
 
