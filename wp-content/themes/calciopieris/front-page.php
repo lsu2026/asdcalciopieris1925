@@ -147,35 +147,23 @@ get_header();
 	</div>
 </section>
 
-<section class="section section-alt" id="news">
-	<div class="container">
-		<div class="section-head">
-			<div class="overline">Ultime notizie</div>
-			<h2>News dal Pieris</h2>
-		</div>
-		<div class="news-dots" id="cp-news-dots" aria-hidden="true"></div>
-		<div class="news-carousel">
-		<button class="news-nav news-nav--prev" type="button" aria-label="Indietro">&lsaquo;</button>
-		<div class="news-embeds-row" id="cp-news-row">
-			<?php
-			/* Prima si provano i post presi da soli dalla Pagina Facebook: sono
-			   quelli che si aggiornano senza che nessuno ci metta mano. Se non
-			   c'e' nulla da mostrare - plugin spento, Pagina non collegata,
-			   nessun post - si ripiega sulle news scritte a mano, cosi' la
-			   sezione non resta mai vuota. */
-			$cp_feed_home = function_exists( 'cp_post_facebook_in_home' ) ? cp_post_facebook_in_home() : '';
-			if ( $cp_feed_home ) {
-				echo $cp_feed_home; // gia' scritto con le classi del tema
-			} else {
-			$news = new WP_Query( array( 'posts_per_page' => 6, 'ignore_sticky_posts' => true ) );
-			if ( $news->have_posts() ) :
-				while ( $news->have_posts() ) : $news->the_post();
-					$cp_content  = get_the_content();
-					$cp_is_embed = ( '1' === get_post_meta( get_the_ID(), '_cpemb', true ) ) || has_shortcode( $cp_content, 'pieris_fb_embed' );
-					if ( $cp_is_embed ) :
+<?php
+/* Le schede si preparano PRIMA di aprire la sezione.
+   Cosi' si puo' decidere di non aprirla affatto: senza questo, quando non c'e'
+   niente da mostrare restavano il titolo e le due frecce del carosello attorno
+   al vuoto, che ha l'aria di un sito rotto invece che di un sito senza notizie.
+
+   Prima si provano i post presi da soli dalla Pagina Facebook - sono quelli che
+   si aggiornano senza che nessuno ci metta mano - e solo se non ce ne sono si
+   ripiega sulle news scritte a mano. */
+$cp_news_html = function_exists( 'cp_post_facebook_in_home' ) ? cp_post_facebook_in_home() : '';
+
+if ( ! $cp_news_html ) {
+	$cp_news = new WP_Query( array( 'posts_per_page' => 6, 'ignore_sticky_posts' => true ) );
+	if ( $cp_news->have_posts() ) {
+		ob_start();
+		while ( $cp_news->have_posts() ) : $cp_news->the_post();
 			?>
-			<div class="news-embed-item"><?php echo do_shortcode( $cp_content ); ?></div>
-			<?php else : ?>
 			<article class="card news-card">
 				<?php if ( has_post_thumbnail() ) : ?>
 				<a class="news-thumb" href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'medium_large' ); ?></a>
@@ -187,8 +175,26 @@ get_header();
 					<a class="leggi" href="<?php the_permalink(); ?>">Leggi tutto &rarr;</a>
 				</div>
 			</article>
-			<?php endif; endwhile; wp_reset_postdata(); endif;
-			} /* fine del ripiego sulle news scritte a mano */ ?>
+			<?php
+		endwhile;
+		wp_reset_postdata();
+		$cp_news_html = ob_get_clean();
+	}
+}
+
+if ( $cp_news_html ) :
+?>
+<section class="section section-alt" id="news">
+	<div class="container">
+		<div class="section-head">
+			<div class="overline">Ultime notizie</div>
+			<h2>News dal Pieris</h2>
+		</div>
+		<div class="news-dots" id="cp-news-dots" aria-hidden="true"></div>
+		<div class="news-carousel">
+		<button class="news-nav news-nav--prev" type="button" aria-label="Indietro">&lsaquo;</button>
+		<div class="news-embeds-row" id="cp-news-row">
+			<?php echo $cp_news_html; // gia' scritto con le classi del tema ?>
 			</div>
 			<button class="news-nav news-nav--next" type="button" aria-label="Scorri avanti">&rsaquo;</button>
 		</div><!-- /.news-carousel -->
@@ -199,7 +205,7 @@ get_header();
 			var prev = document.querySelector('.news-nav--prev');
 			var next = document.querySelector('.news-nav--next');
 			var dotsWrap = document.getElementById('cp-news-dots');
-			var items = Array.prototype.slice.call( row.querySelectorAll('.news-embed-item, .news-card') );
+			var items = Array.prototype.slice.call( row.querySelectorAll('.news-card') );
 			if ( ! items.length ) return;
 			var page = 0, perPage = 1, pages = 1, animating = false;
 
@@ -280,6 +286,7 @@ get_header();
 		</script>
 	</div>
 </section>
+<?php endif; /* fine della sezione news: senza schede non si apre nemmeno */ ?>
 
 <?php /* Store ufficiali: richiamo alla pagina Store. Sono due e stanno sullo stesso
    piano, quindi la fascia mostra una scheda per ciascuno invece di dare risalto

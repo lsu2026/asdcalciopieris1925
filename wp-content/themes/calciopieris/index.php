@@ -47,13 +47,7 @@ $cp_feed_news = function_exists( 'cp_post_facebook' ) ? cp_post_facebook() : '';
 			<?php endif; ?>
 
 			<div class="news-embeds-home news-embeds-list">
-				<?php while ( have_posts() ) : the_post();
-					$cp_content  = get_the_content();
-					$cp_is_embed = ( '1' === get_post_meta( get_the_ID(), '_cpemb', true ) ) || has_shortcode( $cp_content, 'pieris_fb_embed' );
-					if ( $cp_is_embed ) :
-				?>
-				<div class="news-embed-item"><?php echo do_shortcode( $cp_content ); ?></div>
-				<?php else : ?>
+				<?php while ( have_posts() ) : the_post(); ?>
 				<article class="card news-card">
 					<?php if ( has_post_thumbnail() ) : ?>
 					<a class="news-thumb" href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'medium_large' ); ?></a>
@@ -65,7 +59,7 @@ $cp_feed_news = function_exists( 'cp_post_facebook' ) ? cp_post_facebook() : '';
 						<a class="leggi" href="<?php the_permalink(); ?>">Leggi tutto &rarr;</a>
 					</div>
 				</article>
-				<?php endif; endwhile; ?>
+				<?php endwhile; ?>
 			</div>
 			<div class="pagination"><?php echo paginate_links(); ?></div>
 		</section>

@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.6.2
+Version: 1.6.3
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -366,13 +366,6 @@ a:hover { color: var(--oro); }
   align-items: start;
   justify-items: center;
 }
-.news-embeds-home .news-embed-item {
-  width: 100%;
-  max-width: 500px;
-  overflow-x: auto;                 /* su schermi stretti scorre invece di tagliare */
-}
-.news-embeds-home .news-embed-item .cp-fb-embed { margin: 0 auto !important; max-width: none !important; }
-.news-embeds-home .news-embed-item iframe { max-width: none !important; }
 .news-embeds-home .news-card { width: 100%; max-width: 500px; }
 
 /* Home: carosello con frecce */
@@ -421,16 +414,6 @@ a:hover { color: var(--oro); }
   overflow: hidden;
   transition: opacity .3s ease;
 }
-.news-embeds-row .news-embed-item {
-  flex: 0 1 500px;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.news-embeds-row .news-embed-item::-webkit-scrollbar { display: none; height: 0; }
-.news-embeds-row .news-embed-item .cp-fb-embed { margin: 0 auto !important; max-width: none !important; }
-.news-embeds-row .news-embed-item iframe { max-width: none !important; }
 .news-embeds-row .news-card { flex: 0 1 340px; max-width: 100%; }
 
 /* ---------- Staff tecnico ---------- */
