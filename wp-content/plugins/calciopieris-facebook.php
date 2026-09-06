@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Post da Facebook
  * Description: Ci si collega con l'utenza Facebook che amministra la Pagina, si sceglie la Pagina e da quel momento il sito scarica da solo gli ultimi post, foto comprese, e li mostra con la stessa veste delle news. Nasce per sostituire Smash Balloon, che sull'hosting del sito non puo' girare.
- * Version: 1.1
+ * Version: 1.2
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -45,6 +45,10 @@ class CP_Facebook {
 
 	const EVENTO   = 'cp_fb_aggiorna';
 	const CARTELLA = 'pieris-facebook';
+
+	/** Impedisce che due visite in contemporanea vadano a chiedere le stesse cose. */
+	const OPZ_LUCCHETTO   = 'cp_fb_lucchetto';
+	const LUCCHETTO_DURA  = 180;
 
 	/** Versione del Graph API con cui e' stato provato. */
 	const API = 'v21.0';
@@ -97,6 +101,105 @@ class CP_Facebook {
 		add_filter( 'cron_schedules', array( __CLASS__, 'aggiungi_cadenze' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'js_galleria' ) );
 		add_action( 'init', array( __CLASS__, 'programma' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'forse_aggiorna' ) );
+	}
+
+	/* ===================== il giro di scorta ===================== */
+
+	/**
+	 * Aggiorna i post appendendosi a una visita, quando il giro programmato e'
+	 * in ritardo.
+	 *
+	 * SERVE PERCHE' SU QUESTO HOSTING I GIRI PROGRAMMATI NON PARTONO. A ogni
+	 * visita WordPress posa un lucchetto e lancia una richiesta A SE STESSO su
+	 * wp-cron.php; su InfinityFree quella richiesta incontra il controllo
+	 * anti-bot in JavaScript e non arriva mai a eseguire PHP. Il lucchetto pero'
+	 * resta posato per un minuto, e in quella finestra wp-cron.php respinge
+	 * chiunque altro: ogni visita lo rinfresca e l'evento non gira quasi mai.
+	 * Misurato in certificazione il 2026-09-06: ultimo giro 20 ore prima, con la
+	 * cadenza impostata su cinque minuti e il sito visitato nel frattempo.
+	 *
+	 * Qui non si chiede niente a nessuno: il lavoro si fa DENTRO la visita, ma
+	 * DOPO che la pagina e' stata mandata, cosi' chi sta guardando il sito non
+	 * aspetta. Il giro programmato resta al suo posto e continua a funzionare
+	 * dove funziona - in locale - e questo interviene solo quando e' in ritardo.
+	 *
+	 * Si aggancia a template_redirect, che scatta solo per le pagine vere del
+	 * sito: niente chiamate di servizio, niente pannello, niente feed.
+	 */
+	public static function forse_aggiorna() {
+		if ( is_robots() || is_feed() || is_trackback() ) { return; }
+		if ( wp_doing_ajax() || wp_doing_cron() ) { return; }
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) { return; }
+
+		if ( '' === self::token() || '' === self::conf()['pagina'] ) { return; }
+		if ( ! self::in_ritardo() ) { return; }
+		if ( ! self::prendi_lucchetto() ) { return; }
+
+		add_action( 'shutdown', array( __CLASS__, 'giro_di_scorta' ), 99 );
+	}
+
+	/** Da quanto non si aggiorna, e quanto dovrebbe passare al massimo. */
+	private static function in_ritardo() {
+		$cadenze = self::cadenze();
+		$conf    = self::conf();
+		$ogni    = isset( $cadenze[ $conf['cadenza'] ] ) ? $cadenze[ $conf['cadenza'] ]['secondi'] : 300;
+
+		$ultimo = (int) self::stato()['ultimo_giro'];
+		return ( 0 === $ultimo ) || ( ( time() - $ultimo ) >= $ogni );
+	}
+
+	/**
+	 * Prende il lucchetto, se e' libero.
+	 *
+	 * add_option riesce una volta sola, perche' il nome dell'opzione e' unico
+	 * nel database: e' il modo piu' semplice per far vincere una sola visita
+	 * fra due che arrivano insieme. Un lucchetto vecchio - lasciato li' da un
+	 * giro interrotto a meta' - viene tolto e riprovato, altrimenti basterebbe
+	 * un incidente per non aggiornare mai piu'.
+	 */
+	private static function prendi_lucchetto() {
+		$posato = (int) get_option( self::OPZ_LUCCHETTO, 0 );
+
+		if ( $posato && ( time() - $posato ) < self::LUCCHETTO_DURA ) { return false; }
+		if ( $posato ) { delete_option( self::OPZ_LUCCHETTO ); }
+
+		return (bool) add_option( self::OPZ_LUCCHETTO, time(), '', false );
+	}
+
+	/**
+	 * Il lavoro vero, a pagina gia' mandata.
+	 *
+	 * SUL TEMPO C'E' POCO DA SCHERZARE. Su questo hosting PHP gira come modulo
+	 * di Apache: non esiste il modo di chiudere la connessione e continuare a
+	 * lavorare, quindi chi sta guardando il sito ASPETTA davvero. In piu'
+	 * set_time_limit e' disattivata e il server taglia la richiesta a 60
+	 * secondi: un giro lungo non farebbe perdere l'aggiornamento, farebbe
+	 * troncare la pagina a un visitatore.
+	 *
+	 * Percio' qui si lavora con il cronometro: poche foto, attese di rete
+	 * corte, e uno stop netto passati dodici secondi. I testi arrivano subito -
+	 * e sono la cosa che conta - le foto si completano nelle visite successive.
+	 * Il pulsante "Aggiorna adesso" del pannello resta senza fretta: li' c'e'
+	 * un amministratore che ha scelto di aspettare.
+	 */
+	public static function giro_di_scorta() {
+		/* Se il server sapesse chiudere la connessione prima di finire, lo si
+		   farebbe. Su InfinityFree non c'e'; altrove si'. */
+		if ( function_exists( 'fastcgi_finish_request' ) ) { fastcgi_finish_request(); }
+		if ( function_exists( 'litespeed_finish_request' ) ) { litespeed_finish_request(); }
+
+		/* se il visitatore chiude il browser, il lavoro va avanti lo stesso */
+		@ignore_user_abort( true );
+		@set_time_limit( 120 ); // su InfinityFree e' disattivata: non ci si conta
+
+		self::scarica( array(
+			'immagini' => 3,
+			'entro'    => microtime( true ) + 12,
+			'attesa'   => 10,
+		) );
+
+		delete_option( self::OPZ_LUCCHETTO );
 	}
 
 	/**
@@ -405,9 +508,9 @@ class CP_Facebook {
 	}
 
 	/** Una chiamata al Graph API. Restituisce l'array, o il messaggio d'errore. */
-	private static function chiedi( $percorso, $parametri ) {
+	private static function chiedi( $percorso, $parametri, $attesa = 25 ) {
 		$url = 'https://graph.facebook.com/' . self::API . '/' . $percorso . '?' . http_build_query( $parametri );
-		$r   = wp_remote_get( $url, array( 'timeout' => 25 ) );
+		$r   = wp_remote_get( $url, array( 'timeout' => (int) $attesa ) );
 
 		if ( is_wp_error( $r ) ) {
 			return 'Non sono riuscito a contattare Facebook: ' . $r->get_error_message();
@@ -474,7 +577,18 @@ class CP_Facebook {
 	 * meglio un giro che porta a casa i testi e sei foto di un giro che va in
 	 * timeout e non salva niente. Le foto mancanti le prende il giro dopo.
 	 */
-	public static function scarica() {
+	public static function scarica( $limiti = array() ) {
+		/* Quando il giro parte appeso a una visita il tempo NON e' illimitato:
+		   su questo hosting la connessione non si puo' chiudere prima, quindi
+		   chi sta guardando aspetta, e il server taglia la richiesta a 60
+		   secondi. Meglio portare a casa i testi e tre foto, e lasciare il
+		   resto al giro dopo, che tagliare la pagina in faccia a qualcuno. */
+		$limiti = wp_parse_args( $limiti, array(
+			'immagini' => self::IMMAGINI_PER_GIRO,
+			'entro'    => 0,   // istante oltre il quale non si scarica piu' niente; 0 = nessuna fretta
+			'attesa'   => 25,  // secondi concessi a ciascuna richiesta di rete
+		) );
+
 		$conf  = self::conf();
 		$token = self::token();
 
@@ -489,7 +603,7 @@ class CP_Facebook {
 			'limit'        => (int) $conf['quanti'],
 			'fields'       => $campi,
 			'access_token' => $token,
-		) );
+		), $limiti['attesa'] );
 		if ( is_string( $dati ) ) { return self::segna( $dati ); }
 		if ( ! isset( $dati['data'] ) || ! is_array( $dati['data'] ) ) {
 			return self::segna( 'Facebook non ha restituito nessun elenco di post.' );
@@ -542,16 +656,19 @@ class CP_Facebook {
 		   giro: un album di dieci foto non deve mangiarsi il tempo che serve
 		   agli altri post. Quelle che restano indietro le prende il giro dopo. */
 		$nuove = 0;
+		$scaduto = function () use ( $limiti ) {
+			return $limiti['entro'] && microtime( true ) >= $limiti['entro'];
+		};
 		foreach ( $post as $i => $p ) {
-			if ( $nuove >= self::IMMAGINI_PER_GIRO ) { break; }
+			if ( $nuove >= $limiti['immagini'] || $scaduto() ) { break; }
 
 			$fatte = array();
 			foreach ( $p['foto'] as $f ) { if ( ! empty( $f['grande'] ) ) { $fatte[] = $f; } }
 
 			foreach ( $p['remote'] as $n => $url ) {
 				if ( isset( $fatte[ $n ] ) ) { continue; }             // gia' in casa
-				if ( $nuove >= self::IMMAGINI_PER_GIRO ) { break; }
-				$scaricata = self::scarica_immagine( $url, $p['id'], $n + 1 );
+				if ( $nuove >= $limiti['immagini'] || $scaduto() ) { break; }
+				$scaricata = self::scarica_immagine( $url, $p['id'], $n + 1, $limiti['attesa'] );
 				if ( $scaricata ) {
 					$fatte[ $n ] = $scaricata;
 					$nuove++;
@@ -710,7 +827,7 @@ class CP_Facebook {
 	 * Se il ridimensionamento non e' possibile - libreria grafica assente - si
 	 * tiene comunque l'originale: una foto pesante e' meglio di nessuna foto.
 	 */
-	private static function scarica_immagine( $url, $id, $numero ) {
+	private static function scarica_immagine( $url, $id, $numero, $attesa = 30 ) {
 		$dir = self::cartella();
 		if ( ! wp_mkdir_p( $dir['via'] ) ) { return array(); }
 
@@ -718,7 +835,7 @@ class CP_Facebook {
 		$nome = $base . '.jpg';
 		$via  = trailingslashit( $dir['via'] ) . $nome;
 
-		$r = wp_remote_get( $url, array( 'timeout' => 30 ) );
+		$r = wp_remote_get( $url, array( 'timeout' => (int) $attesa ) );
 		if ( is_wp_error( $r ) ) { return array(); }
 		if ( 200 !== (int) wp_remote_retrieve_response_code( $r ) ) { return array(); }
 
@@ -1202,9 +1319,10 @@ class CP_Facebook {
 								<?php endforeach; ?>
 							</select>
 							<p class="description">
-								I giri di WordPress partono <strong>quando qualcuno visita il sito</strong>, non
-								da soli: su un sito poco frequentato l&rsquo;attesa reale pu&ograve; essere
-								pi&ugrave; lunga di quella scelta qui. Per un aggiornamento subito c&rsquo;&egrave;
+								L&rsquo;aggiornamento avviene <strong>quando qualcuno visita il sito</strong>, non
+								da solo: su un sito poco frequentato l&rsquo;attesa reale pu&ograve; essere
+								pi&ugrave; lunga di quella scelta qui. Chi visita non aspetta &mdash; il lavoro
+								parte a pagina gi&agrave; mostrata. Per un aggiornamento subito c&rsquo;&egrave;
 								il pulsante <em>Aggiorna adesso</em>.
 							</p>
 						</td>
