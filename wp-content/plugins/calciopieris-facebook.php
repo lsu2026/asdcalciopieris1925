@@ -558,7 +558,26 @@ class CP_Facebook {
 				}
 			}
 			ksort( $fatte );
-			$post[ $i ]['foto'] = array_values( $fatte );
+			$fatte = array_values( $fatte );
+
+			/* Le anteprime mancanti si ricavano dal file GIA' IN CASA, senza
+			   riscaricare niente. Serve ai post presi prima che esistesse la
+			   galleria: la loro prima foto resta com'e' - e va benissimo - ma
+			   senza anteprima la striscia ripiegherebbe sulla foto grande, e
+			   il visitatore si scaricherebbe 80 kB per un riquadro da 56 pixel.
+			   Solo se le foto sono piu' d'una: con una sola la striscia non
+			   compare e l'anteprima sarebbe un file inutile sul disco. */
+			if ( count( $fatte ) > 1 ) {
+				foreach ( $fatte as $k => $f ) {
+					if ( ! empty( $f['mini'] ) || empty( $f['grande'] ) ) { continue; }
+					$via = $cartella . $f['grande'];
+					if ( ! file_exists( $via ) ) { continue; }
+					$base = preg_replace( '/\.jpg$/i', '', $f['grande'] );
+					$fatte[ $k ]['mini'] = self::fai_anteprima( $via, $base );
+				}
+			}
+
+			$post[ $i ]['foto'] = $fatte;
 		}
 		if ( $nuove ) { update_option( self::OPZ_POST, $post, false ); }
 
