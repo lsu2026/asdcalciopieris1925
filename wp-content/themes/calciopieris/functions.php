@@ -92,12 +92,14 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 			. 'Non &egrave; un titolo di facciata: comporta un responsabile del settore giovanile e un responsabile tecnico '
 			. 'con qualifica federale, istruttori qualificati &mdash; quelli che trovate qui sotto &mdash; con un rapporto di '
 			. 'un allenatore ogni quindici bambini nelle categorie di base, un impianto idoneo con defibrillatore e personale '
-			. 'formato al suo uso, e l&rsquo;impegno a divulgare la <strong>Carta dei Diritti dei Ragazzi</strong> fra atleti, '
-			. 'tecnici, dirigenti e genitori.</p>';
-		$h .= '<p>Quella Carta apre il <strong>Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico</strong>, il '
-			. 'documento con cui la FIGC regola l&rsquo;attivit&agrave; giovanile della stagione: dal diritto di divertirsi e '
-			. 'giocare fino al diritto di non essere un campione, e i doveri che da quei diritti discendono per gli adulti. '
-			. 'Lo trovate qui, e vi invitiamo a leggerlo.</p>';
+			. 'formato al suo uso, e l&rsquo;impegno a far conoscere ad atleti, tecnici, dirigenti e genitori i principi su cui '
+			. 'la Federazione fonda l&rsquo;attivit&agrave; giovanile.</p>';
+		$h .= '<p>Quei principi aprono il <strong>Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico</strong>, il '
+			. 'documento con cui la FIGC regola ogni stagione l&rsquo;attivit&agrave; giovanile: le categorie e il modo di '
+			. 'giocarle, la tutela e il benessere dei minori, la salute e la sicurezza in campo. La premessa elenca i diritti '
+			. 'che l&rsquo;O.N.U. riconosce ai ragazzi che fanno sport &mdash; dal diritto di divertirsi e giocare fino a quello '
+			. 'di non essere un campione &mdash; e i doveri che ne discendono per gli adulti. Lo trovate qui, e vi invitiamo a '
+			. 'leggerlo.</p>';
 		if ( shortcode_exists( 'documenti' ) ) {
 			$h .= do_shortcode( '[documenti area="attivita-di-base"]' );
 		}

@@ -37,12 +37,12 @@ class CP_Documenti {
 				'label' => 'Codice di Condotta',
 				'desc'  => 'Il codice di condotta che impegna tesserati, tecnici, dirigenti e accompagnatori.',
 			),
-			'carta-diritti-ragazzi' => array(
+			'cu1-sgs' => array(
 				'area'  => 'attivita-di-base',
-				'label' => 'Carta dei diritti dei ragazzi e obblighi dei genitori',
-				'desc'  => 'Il Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico della FIGC, che si apre con la '
-					. 'Carta dei Diritti dei ragazzi allo sport dell&rsquo;O.N.U. e con i doveri che ne discendono per gli adulti. '
-					. 'Divulgarla &egrave; uno degli impegni previsti per i Club di 1&deg; livello.',
+				'label' => 'Comunicato Ufficiale n.&nbsp;1 FIGC-SGS 2026/2027',
+				'desc'  => 'Il documento con cui la FIGC regola ogni stagione l&rsquo;attivit&agrave; giovanile: categorie e '
+					. 'modalit&agrave; di gioco, tutela e benessere dei minori, salute e sicurezza, tornei. La premessa elenca i '
+					. 'diritti riconosciuti dall&rsquo;O.N.U. ai ragazzi che fanno sport e i doveri che ne discendono per gli adulti.',
 			),
 		) );
 	}
