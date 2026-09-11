@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Calcio Pieris – Maglie
- * Description: Gestisce le foto delle tre maglie della prima squadra (prima, seconda, portiere) da un pannello admin, con upload dalla Libreria media. Le immagini alimentano la sezione "Le maglie della prima squadra" della pagina Store tramite la funzione cp_get_kits().
- * Version: 1.2
+ * Description: Gestisce le foto delle tre maglie della prima squadra (prima, seconda, terza) da un pannello admin, con upload dalla Libreria media. Le immagini alimentano la sezione "Le maglie della prima squadra" della pagina Store tramite la funzione cp_get_kits().
+ * Version: 1.3
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -25,7 +25,7 @@ class CP_Maglie {
 		return array(
 			'prima'    => array( 'name' => 'Prima maglia',    'desc' => 'La maglia di casa, nei colori granata del club.' ),
 			'seconda'  => array( 'name' => 'Seconda maglia',  'desc' => 'La maglia utilizzata nelle gare in trasferta.' ),
-			'portiere' => array( 'name' => 'Maglia portiere', 'desc' => 'La maglia di gara del portiere.' ),
+			'terza'    => array( 'name' => 'Terza maglia',    'desc' => 'La terza divisa, per le gare in cui i colori delle prime due non bastano a distinguere le squadre.' ),
 		);
 	}
 

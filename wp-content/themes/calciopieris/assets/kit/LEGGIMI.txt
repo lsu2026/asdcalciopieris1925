@@ -4,7 +4,7 @@ Nomi dei file attesi (l'estensione puo' essere .webp, .jpg, .jpeg o .png):
 
     prima.*      -> Prima maglia
     seconda.*    -> Seconda maglia
-    portiere.*   -> Maglia portiere
+    terza.*      -> Terza maglia
 
 Basta copiare qui il file con il nome giusto: la pagina Store lo mostra
 automaticamente al posto del segnaposto, senza modifiche al codice.

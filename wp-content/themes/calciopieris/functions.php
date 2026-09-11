@@ -194,7 +194,7 @@ function cp_store_info() {
  *
  * Ritorna stringa vuota se il file non c'e' ancora: in quel caso il template mostra un
  * segnaposto. Per pubblicare una foto basta copiare il file nella cartella con il nome
- * giusto (prima, seconda, portiere) - non serve toccare il codice.
+ * giusto (prima, seconda, terza) - non serve toccare il codice.
  */
 function cp_kit_image_url( $slug ) {
 	$base = get_template_directory() . '/assets/kit/';

@@ -30,7 +30,7 @@ $stores = function_exists( 'cp_stores' ) ? cp_stores() : array(
 $kits = function_exists( 'cp_get_kits' ) ? cp_get_kits() : array(
 	array( 'slug' => 'prima',    'name' => 'Prima maglia',    'desc' => 'La maglia di casa, nei colori granata del club.',   'image' => '' ),
 	array( 'slug' => 'seconda',  'name' => 'Seconda maglia',  'desc' => 'La maglia utilizzata nelle gare in trasferta.',     'image' => '' ),
-	array( 'slug' => 'portiere', 'name' => 'Maglia portiere', 'desc' => 'La maglia di gara del portiere.',                   'image' => '' ),
+	array( 'slug' => 'terza',    'name' => 'Terza maglia',    'desc' => 'La terza divisa, per le gare in cui i colori delle prime due non bastano.', 'image' => '' ),
 );
 
 /* Etichette decorative delle schede maglia: numero di riferimento e tipo di gara.
@@ -38,7 +38,7 @@ $kits = function_exists( 'cp_get_kits' ) ? cp_get_kits() : array(
 $kit_meta = array(
 	'prima'    => array( 'num' => '01', 'tag' => 'Casa' ),
 	'seconda'  => array( 'num' => '02', 'tag' => 'Trasferta' ),
-	'portiere' => array( 'num' => 'GK', 'tag' => 'Portiere' ),
+	'terza'    => array( 'num' => '03', 'tag' => 'Terza' ),
 );
 ?>
 <style>
@@ -146,7 +146,7 @@ $kit_meta = array(
 		<?php /* Da qui in avanti i contenuti sono descrittivi e non ancora confermati dal
 		   club: restano marcati come provvisori finche' non arrivano i testi ufficiali. */ ?>
 		<?php /* Maglie della prima squadra. Le fotografie non sono ancora disponibili: finche' i
-		   file non vengono copiati in assets/kit/ (prima, seconda, portiere - con
+		   file non vengono copiati in assets/kit/ (prima, seconda, terza - con
 		   estensione .webp .jpg .jpeg o .png) ogni scheda mostra un segnaposto, e le
 		   immagini compaiono da sole appena i file sono presenti. */ ?>
 		<section class="store-kit">
