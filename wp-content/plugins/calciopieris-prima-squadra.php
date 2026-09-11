@@ -798,8 +798,6 @@ class CP_Prima_Squadra {
 		$done = true;
 		return '<style>
 		.cp-ps{--g:var(--granata,#901913);--o:var(--oro,#d6aa63);margin:32px 0}
-		.cp-section-title{text-align:center;color:var(--g);font-family:var(--font-display,inherit);font-size:1.7rem;margin:0 0 18px;letter-spacing:.6px;text-transform:uppercase}
-		.cp-section-title::after{content:"";display:block;width:60px;height:3px;background:var(--o);margin:8px auto 0;border-radius:2px}
 		.cp-ps__head{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:22px}
 		.cp-season-title{text-align:center;min-width:200px}
 		.cp-season-kicker{display:block;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:#999;font-weight:600}
@@ -1248,7 +1246,6 @@ JS;
 		$out .= '<div class="cp-ps" id="cp-classifica"'
 			. ' data-cp-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"'
 			. ' data-cp-nonce="' . esc_attr( wp_create_nonce( 'cpps_season' ) ) . '">';
-		$out .= '<h2 class="cp-section-title">Classifica e risultati</h2>';
 		$out .= '<div class="cp-ps__head">';
 		if ( $multi ) { $out .= '<button type="button" class="cp-arrow cp-arrow-left" aria-label="Stagione precedente">&#8249;</button>'; }
 		$out .= '<div class="cp-season-title"><span class="cp-season-kicker">Stagione</span>';
