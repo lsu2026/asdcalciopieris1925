@@ -611,6 +611,20 @@ class CP_Prima_Squadra {
 			$wpdb->delete( $table, array( 'id' => intval( $_GET['delmatch'] ) ) );
 			self::notice( 'Partita eliminata.' );
 		}
+
+		/* Rimette una partita fra quelle da giocare, cioe' le toglie il risultato.
+		   Serve quando un risultato e' stato inserito per sbaglio, o quando una
+		   gara viene annullata e rinviata: la partita resta in calendario con la
+		   sua data e le sue squadre, e torna semplicemente senza punteggio.
+		   Si scrive NULL con una query esplicita e non con update(): i due campi
+		   devono diventare vuoti davvero, non zero - uno 0-0 e' un risultato. */
+		if ( isset( $_GET['resetmatch'] ) && check_admin_referer( 'cpps_resetmatch' ) ) {
+			$wpdb->query( $wpdb->prepare(
+				'UPDATE ' . $table . ' SET home_goals = NULL, away_goals = NULL WHERE id = %d',
+				intval( $_GET['resetmatch'] )
+			) );
+			self::notice( 'Partita rimessa fra quelle da giocare: il risultato e&rsquo; stato tolto.' );
+		}
 		if ( isset( $_POST['cpps_import_matches'] ) && check_admin_referer( 'cpps_import_m' ) && ! empty( $_FILES['csv']['tmp_name'] ) ) {
 			$n = self::import_matches_csv( $season, $_FILES['csv']['tmp_name'], ! empty( $_POST['wipe'] ), $comp );
 			self::notice( "Importate {$n} partite dal file CSV." );
@@ -641,6 +655,13 @@ class CP_Prima_Squadra {
 						<td><?php echo ( null !== $m->home_goals && null !== $m->away_goals ) ? intval( $m->home_goals ) . ' - ' . intval( $m->away_goals ) : '<em>da giocare</em>'; ?></td>
 						<td>
 							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp . '&editmatch=' . $m->id ) ); ?>">Modifica</a> |
+							<?php
+							/* L'azione compare solo se un risultato c'e': su una partita
+							   gia' da giocare non avrebbe niente da togliere. */
+							if ( null !== $m->home_goals && null !== $m->away_goals ) : ?>
+							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp . '&resetmatch=' . $m->id ), 'cpps_resetmatch' ) ); ?>"
+							   onclick="return confirm('Togliere il risultato e rimettere la partita fra quelle da giocare?')">Rimetti da giocare</a> |
+							<?php endif; ?>
 							<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cpps_matches&s=' . $season . '&c=' . $comp . '&delmatch=' . $m->id ), 'cpps_delmatch' ) ); ?>" style="color:#b32d2e" onclick="return confirm('Eliminare la partita?')">Elimina</a>
 						</td>
 					</tr>
