@@ -1,6 +1,6 @@
 <?php
 /**
- * Template della pagina "Settore Giovanile" — riunisce tutte le categorie giovanili.
+ * Template della pagina "Attività di Base" — riunisce tutte le categorie giovanili.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 get_header();
@@ -40,13 +40,13 @@ $categorie = array(
 ?>
 <div class="page-hero">
 	<div class="container">
-		<div class="breadcrumb"><a style="color:var(--oro)" href="<?php echo esc_url( home_url( '/' ) ); ?>">Home</a> &rsaquo; <a style="color:var(--oro)" href="<?php echo esc_url( home_url( '/squadre/' ) ); ?>">Squadre</a> &rsaquo; Settore Giovanile</div>
-		<h1>Settore Giovanile</h1>
+		<div class="breadcrumb"><a style="color:var(--oro)" href="<?php echo esc_url( home_url( '/' ) ); ?>">Home</a> &rsaquo; <a style="color:var(--oro)" href="<?php echo esc_url( home_url( '/squadre/' ) ); ?>">Squadre</a> &rsaquo; Attività di Base</div>
+		<h1>Attività di Base</h1>
 	</div>
 </div>
 
 <div class="entry-content">
-	<p>Il settore giovanile &egrave; il cuore dell&rsquo;A.S.D. Calcio Pieris. Accompagniamo bambini e bambine passo dopo passo, dai primi calci fino alle soglie della Prima Squadra, rispettando i tempi di ciascuno e mettendo al centro il <strong>divertimento, il rispetto e lo spirito di squadra</strong>.</p>
+	<p>L&rsquo;attività di base &egrave; il cuore dell&rsquo;A.S.D. Calcio Pieris. Accompagniamo bambini e bambine passo dopo passo, dai primi calci fino alle soglie della Prima Squadra, rispettando i tempi di ciascuno e mettendo al centro il <strong>divertimento, il rispetto e lo spirito di squadra</strong>.</p>
 	<p>Il nostro percorso formativo &egrave; suddiviso in tre categorie per fasce d&rsquo;et&agrave;, ognuna con obiettivi e attivit&agrave; pensati per la crescita dei pi&ugrave; piccoli.</p>
 
 	<div class="giovanili-list">

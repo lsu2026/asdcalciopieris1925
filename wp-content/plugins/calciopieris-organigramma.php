@@ -263,7 +263,7 @@ class CP_Organigramma {
 		echo '<p>' . esc_html( self::note_text() ) . '</p>';
 		echo '<p class="cporg-staff-links">Consulta lo staff tecnico di ciascuna area: '
 			. '<a href="' . esc_url( home_url( '/prima-squadra/#staff-tecnico' ) ) . '">Prima Squadra</a> &middot; '
-			. '<a href="' . esc_url( home_url( '/settore-giovanile/#staff-tecnico' ) ) . '">Settore Giovanile</a>.</p>';
+			. '<a href="' . esc_url( home_url( '/attivita-di-base/#staff-tecnico' ) ) . '">Attività di Base</a>.</p>';
 
 		return ob_get_clean();
 	}

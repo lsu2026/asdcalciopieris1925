@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.6.3
+Version: 1.6.4
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -450,7 +450,7 @@ a:hover { color: var(--oro); }
   line-height: 1.2;
 }
 
-/* ---------- CTA "Vieni a provare" (settore giovanile) ---------- */
+/* ---------- CTA "Vieni a provare" (attività di base) ---------- */
 .prova-cta {
   background: #faf7f2;
   border: 1px solid #eee;
@@ -633,7 +633,7 @@ a:hover { color: var(--oro); }
   .squadre-grid { grid-template-columns: 1fr; }
 }
 
-/* ---------- Settore giovanile (categorie in blocchi) ---------- */
+/* ---------- Attività di base (categorie in blocchi) ---------- */
 .giovanili-list { display: grid; gap: 22px; margin: 2.2em 0 2.8em; }
 .giovanile-block { border-left: 4px solid var(--oro); }
 .giovanile-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }

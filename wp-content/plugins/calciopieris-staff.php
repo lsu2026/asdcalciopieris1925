@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Calcio Pieris – Staff e Safeguarding
- * Description: Gestisce le persone (ruolo + nome) di Prima Squadra, Settore Giovanile e Safeguarding, con righe aggiungibili/rimovibili e ordinabili via trascinamento. I dati alimentano le pagine tramite cp_get_staff() e, per il Safeguarding, lo shortcode [safeguarding].
+ * Description: Gestisce le persone (ruolo + nome) di Prima Squadra, Attività di Base e Safeguarding, con righe aggiungibili/rimovibili e ordinabili via trascinamento. I dati alimentano le pagine tramite cp_get_staff() e, per il Safeguarding, lo shortcode [safeguarding].
  * Version: 1.2
  * Author: A.S.D. Calcio Pieris 1925
  */
@@ -27,7 +27,7 @@ class CP_Staff {
 	public static function groups() {
 		return array(
 			'prima'        => 'Prima Squadra',
-			'giovanile'    => 'Settore Giovanile',
+			'giovanile'    => 'Attività di Base',
 			'safeguarding' => 'Safeguarding',
 		);
 	}

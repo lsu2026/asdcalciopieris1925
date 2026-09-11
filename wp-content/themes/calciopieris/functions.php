@@ -117,7 +117,7 @@ function cp_stores() {
 			'logo'  => get_template_directory_uri() . '/assets/sponsors/eyestore.jpg',
 			'cerca' => 'eye',
 			'cta'   => 'Vai ai capi granata',
-			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e il settore giovanile indossano.',
+			'desc'  => 'Punto di riferimento per il materiale tecnico e l&rsquo;abbigliamento del club: le stesse divise e gli stessi capi che la prima squadra e l&rsquo;attività di base indossano.',
 		),
 		array(
 			'name'  => 'Maglie4team',
@@ -210,3 +210,41 @@ function cp_asset_url( $stored ) {
 	if ( false === $pos ) { return $stored; }              // esterno: non lo tocco
 	return content_url( substr( $stored, $pos + strlen( '/wp-content/' ) ) );
 }
+
+
+/**
+ * I vecchi indirizzi delle pagine rinominate portano al nuovo, invece che a un 404.
+ *
+ * WordPress questo lo fa da solo, ma SOLO PER GLI ARTICOLI: la funzione che
+ * ricorda il vecchio indirizzo (wp_check_for_changed_slugs) si ferma sui tipi
+ * gerarchici, e le pagine lo sono. Verificato sul campo rinominando
+ * "Settore Giovanile": nessun vecchio indirizzo era stato memorizzato.
+ *
+ * Senza questo, ogni link gia' in giro - un post su Facebook, un volantino,
+ * un risultato di Google - finirebbe su una pagina non trovata.
+ *
+ * Agisce solo quando WordPress non ha trovato nulla, quindi non puo' mai
+ * mettersi davanti a una pagina che esiste davvero.
+ */
+function cp_vecchi_indirizzi() {
+	if ( ! is_404() ) { return; }
+
+	$vecchi = array(
+		'settore-giovanile' => 'attivita-di-base',   // rinominata l'11 settembre 2026
+	);
+
+	$radice   = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$chiesto  = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH );
+
+	/* il sito puo' stare in una sottocartella: si toglie quella parte */
+	if ( '' !== $radice && 0 === strpos( $chiesto, $radice ) ) {
+		$chiesto = substr( $chiesto, strlen( $radice ) );
+	}
+	$chiesto = trim( $chiesto, '/' );
+
+	if ( isset( $vecchi[ $chiesto ] ) ) {
+		wp_safe_redirect( home_url( '/' . $vecchi[ $chiesto ] . '/' ), 301 );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'cp_vecchi_indirizzi' );

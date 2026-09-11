@@ -54,7 +54,7 @@ $lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmo
 			<a class="btn btn-granata" href="<?php echo esc_url( home_url( '/contatti/' ) ); ?>">Contattaci</a>
 		</div>
 
-		<p class="sponsors-intro">Un grazie di cuore alle aziende che sostengono l&rsquo;A.S.D. Calcio Pieris 1925. Il loro supporto rende possibile la nostra attivit&agrave; sportiva, dal settore giovanile alla prima squadra.</p>
+		<p class="sponsors-intro">Un grazie di cuore alle aziende che sostengono l&rsquo;A.S.D. Calcio Pieris 1925. Il loro supporto rende possibile la nostra attivit&agrave; sportiva, dall&rsquo;attività di base alla prima squadra.</p>
 
 		<?php foreach ( $sponsors as $i => $sp ) :
 			$rev  = ( $i % 2 === 1 ) ? ' sp-row--rev' : '';

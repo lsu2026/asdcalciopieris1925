@@ -14,7 +14,7 @@ get_header();
 			<h1>A.S.D. Calcio <span>Pieris 1925</span></h1>
 			<p>Cento anni di storia nel cuore della Bisiacaria e un secolo nuovo tutto da giocare: un futuro da costruire insieme, come squadra, uniti dalla passione per il calcio che nasce dal sorriso.</p>
 			<div class="hero-actions">
-				<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/settore-giovanile/#vuoi-giocare' ) ); ?>">Gioca con noi</a>
+				<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/attivita-di-base/#vuoi-giocare' ) ); ?>">Gioca con noi</a>
 				<a class="btn btn-outline" style="border-color:var(--oro);color:var(--bianco)" href="<?php echo esc_url( home_url( '/la-nostra-storia/' ) ); ?>">La nostra storia</a>
 			</div>
 		</div>
@@ -111,7 +111,7 @@ get_header();
 			<span>Gioca</span><i>&bull;</i><span>Impara</span><i>&bull;</i><span>Cresci</span><i>&bull;</i><span class="oro">Insieme!</span>
 		</div>
 		<div class="mission-actions">
-			<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/settore-giovanile/' ) ); ?>">Scopri il Settore Giovanile</a>
+			<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/attivita-di-base/' ) ); ?>">Scopri l&rsquo;Attività di Base</a>
 			<a class="btn btn-ghost" href="<?php echo esc_url( home_url( '/prima-squadra/' ) ); ?>">Scopri la Prima Squadra</a>
 		</div>
 	</div>
@@ -142,7 +142,7 @@ get_header();
 				<h2>Gioca per il <span>Pieris!</span></h2>
 				<p>Le iscrizioni alla stagione sportiva sono aperte: vieni a trovarci al campo o scrivici per informazioni sui tesseramenti.</p>
 			</div>
-			<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/settore-giovanile/#vuoi-giocare' ) ); ?>">Vieni a provare</a>
+			<a class="btn btn-oro" href="<?php echo esc_url( home_url( '/attivita-di-base/#vuoi-giocare' ) ); ?>">Vieni a provare</a>
 		</div>
 	</div>
 </section>
