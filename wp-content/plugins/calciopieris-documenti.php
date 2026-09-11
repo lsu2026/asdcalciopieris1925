@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Documenti
  * Description: Carica i documenti ufficiali della societa' dalla Libreria media e li rende scaricabili dalle pagine tramite lo shortcode [documenti area="..."]. Nasce per il Modello Organizzativo e il Codice di Condotta della pagina Safeguarding; per aggiungere altre caselle basta una riga in slots().
- * Version: 1.1
+ * Version: 1.2
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -39,7 +39,11 @@ class CP_Documenti {
 			),
 			'cu1-sgs' => array(
 				'area'  => 'attivita-di-base',
-				'label' => 'Comunicato Ufficiale n.&nbsp;1 FIGC-SGS 2026/2027',
+				/* Senza la stagione, di proposito: il documento si sostituisce ogni
+				   anno dal pannello, e un'annata scritta qui resterebbe a mentire
+				   dal primo luglio successivo. La data che si legge accanto al
+				   pulsante e' quella del caricamento, e si aggiorna da sola. */
+				'label' => 'Comunicato Ufficiale n.&nbsp;1 FIGC-SGS',
 				'desc'  => 'Il documento con cui la FIGC regola ogni stagione l&rsquo;attivit&agrave; giovanile: categorie e '
 					. 'modalit&agrave; di gioco, tutela e benessere dei minori, salute e sicurezza, tornei. La premessa elenca i '
 					. 'diritti riconosciuti dall&rsquo;O.N.U. ai ragazzi che fanno sport e i doveri che ne discendono per gli adulti.',
