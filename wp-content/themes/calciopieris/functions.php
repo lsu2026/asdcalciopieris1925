@@ -74,6 +74,21 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 	$rows = function_exists( 'cp_get_staff' ) ? cp_get_staff( $group ) : $default;
 	if ( empty( $rows ) ) { return ''; }
 	$h  = '<section class="staff-tecnico" id="staff-tecnico"><h2>Staff tecnico</h2>';
+
+	/* Il riconoscimento FIGC riguarda il settore giovanile, non la prima
+	   squadra: il paragrafo compare quindi solo nell'Attivita' di Base.
+	   Dice che cosa comporta davvero quella qualifica, perche' "Club di 1
+	   livello" da solo non significa niente per un genitore che legge. */
+	if ( 'giovanile' === $group ) {
+		$h .= '<p class="staff-intro">L&rsquo;A.S.D. Calcio Pieris 1925 &egrave; riconosciuta dalla FIGC come '
+			. '<strong>Club di 1&deg; livello</strong> nel Sistema di Qualifica dei Club del Settore Giovanile e Scolastico. '
+			. 'Non &egrave; un titolo di facciata: comporta un responsabile del settore giovanile e un responsabile tecnico '
+			. 'con qualifica federale, istruttori qualificati con un rapporto di un allenatore ogni quindici bambini nelle '
+			. 'categorie di base, un impianto idoneo con defibrillatore e personale formato al suo uso, e l&rsquo;impegno a '
+			. 'divulgare la Carta dei Diritti dei Ragazzi fra atleti, tecnici, dirigenti e genitori. '
+			. 'Le qualifiche che leggete qui sotto sono parte di quel riconoscimento.</p>';
+	}
+
 	$h .= '<table><thead><tr><th>Riferimenti</th><th>Nome</th></tr></thead><tbody>';
 	foreach ( $rows as $r ) {
 		$role = isset( $r['role'] ) ? $r['role'] : '';

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Documenti
  * Description: Carica i documenti ufficiali della societa' dalla Libreria media e li rende scaricabili dalle pagine tramite lo shortcode [documenti area="..."]. Nasce per il Modello Organizzativo e il Codice di Condotta della pagina Safeguarding; per aggiungere altre caselle basta una riga in slots().
- * Version: 1.0
+ * Version: 1.1
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -37,12 +37,22 @@ class CP_Documenti {
 				'label' => 'Codice di Condotta',
 				'desc'  => 'Il codice di condotta che impegna tesserati, tecnici, dirigenti e accompagnatori.',
 			),
+			'carta-diritti-ragazzi' => array(
+				'area'  => 'attivita-di-base',
+				'label' => 'Carta dei diritti dei ragazzi e obblighi dei genitori',
+				'desc'  => 'Il Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico della FIGC, che si apre con la '
+					. 'Carta dei Diritti dei ragazzi allo sport dell&rsquo;O.N.U. e con i doveri che ne discendono per gli adulti. '
+					. 'Divulgarla &egrave; uno degli impegni previsti per i Club di 1&deg; livello.',
+			),
 		) );
 	}
 
 	/** Etichette delle aree, per i titoli nel pannello. */
 	public static function aree() {
-		return apply_filters( 'cp_documenti_aree', array( 'safeguarding' => 'Safeguarding' ) );
+		return apply_filters( 'cp_documenti_aree', array(
+			'safeguarding'     => 'Safeguarding',
+			'attivita-di-base' => 'Attivit&agrave; di Base',
+		) );
 	}
 
 	public static function init() {

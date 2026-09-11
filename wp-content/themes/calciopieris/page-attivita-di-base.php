@@ -114,6 +114,16 @@ $categorie = array(
 		<?php endforeach; ?>
 	</div>
 
+	<?php /* Il documento si carica dal pannello Documenti, area "Attivita' di
+	   Base". Se non c'e' ancora, lo shortcode scrive da solo che e' in corso
+	   di pubblicazione invece di lasciare un buco. */ ?>
+	<section class="carta-diritti" id="carta-diritti">
+		<h2>La Carta dei Diritti dei Ragazzi</h2>
+		<p>Il <strong>Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico</strong> &egrave; il documento con cui la FIGC regola tutta l&rsquo;attivit&agrave; giovanile della stagione. Si apre con la <strong>Carta dei Diritti dei ragazzi allo sport</strong> dell&rsquo;O.N.U. &mdash; dal diritto di divertirsi e giocare fino al diritto di non essere un campione &mdash; e con i doveri che da quei diritti discendono per gli adulti: allenatori, dirigenti e genitori.</p>
+		<p>Divulgarla &egrave; uno degli impegni che il club si assume come Club di 1&deg; livello. Per questo la trovate qui, e vi invitiamo a leggerla.</p>
+		<?php echo do_shortcode( '[documenti area="attivita-di-base"]' ); ?>
+	</section>
+
 	<?php /* Il richiamo a venire a provare chiude la pagina: arriva dopo che
 	   si e' letto che cosa offriamo, non prima. L'ancora e' la stessa di
 	   sempre, cosi' i pulsanti della home continuano a portare qui. */ ?>
