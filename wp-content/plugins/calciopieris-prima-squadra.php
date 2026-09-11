@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Prima Squadra (Classifica e Partite)
  * Description: Gestione di stagioni, calendario partite e classifica della Prima Squadra, con area admin dedicata e shortcode [pieris_prima_squadra] per la visualizzazione (stagione corrente di default, con selettore delle stagioni passate). Ogni stagione tiene separati campionato e Coppa Regione, scambiabili in pagina con un selettore a icone.
- * Version: 1.6
+ * Version: 1.7
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -17,6 +17,22 @@ class CP_Prima_Squadra {
 	   grazie al valore predefinito della colonna. */
 	const CAMPIONATO = 'campionato';
 	const COPPA      = 'coppa';
+
+	/**
+	 * Interruttore per togliere dal sito l'intero blocco Classifica e risultati.
+	 *
+	 * Serve nei periodi in cui i dati non ci sono o non sono attendibili - fra
+	 * una stagione e l'altra, o quando la federazione non ha ancora pubblicato
+	 * il girone: meglio nessuna sezione che una sezione che dice cose vecchie.
+	 *
+	 * Spegne il blocco, non cancella niente: stagioni, partite e classifiche
+	 * restano nel database e tornano visibili togliendo la spunta.
+	 */
+	const OPT_NASCONDI = 'cpps_nascondi';
+
+	public static function nascosta() {
+		return (bool) get_option( self::OPT_NASCONDI, 0 );
+	}
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
@@ -394,12 +410,44 @@ class CP_Prima_Squadra {
 			self::notice( 'Stagione (e relativi dati) eliminata.' );
 		}
 
+		/* L'interruttore ha un modulo tutto suo, con il proprio nonce: cosi'
+		   salvarlo non richiede di ripassare da tutti i campi della stagione,
+		   e una svista qui non puo' toccare i dati delle stagioni. */
+		if ( isset( $_POST['cpps_save_visibilita'] ) && check_admin_referer( 'cpps_visibilita' ) ) {
+			update_option( self::OPT_NASCONDI, empty( $_POST['cpps_nascondi'] ) ? 0 : 1 );
+			self::notice( self::nascosta()
+				? 'Sezione nascosta: sul sito non compare piu\'.'
+				: 'Sezione di nuovo visibile sul sito.' );
+		}
+
 		$edit = null;
 		if ( isset( $_GET['editseason'] ) ) { $edit = self::season( intval( $_GET['editseason'] ) ); }
 		$seasons = self::seasons();
 		?>
 		<div class="wrap">
 			<h1>Stagioni</h1>
+
+			<?php if ( self::nascosta() ) : ?>
+			<div class="notice notice-warning" style="margin:12px 0">
+				<p><strong>La sezione &ldquo;Classifica e risultati&rdquo; non compare sul sito.</strong>
+				I dati qui sotto restano al loro posto: torna visibile togliendo la spunta.</p>
+			</div>
+			<?php endif; ?>
+
+			<form method="post" style="background:#fff;border:1px solid #c3c4c7;border-left-width:4px;border-left-color:#72aee6;padding:10px 14px;margin:0 0 22px;max-width:860px">
+				<?php wp_nonce_field( 'cpps_visibilita' ); ?>
+				<label style="font-weight:600">
+					<input type="checkbox" name="cpps_nascondi" value="1" <?php checked( self::nascosta() ); ?>>
+					Nascondi dal sito l&rsquo;intera sezione &ldquo;Classifica e risultati&rdquo;
+				</label>
+				<p class="description" style="margin:6px 0 10px">
+					Toglie dalle pagine tutto il blocco: il carosello delle stagioni, le classifiche e i
+					calendari. Utile fra una stagione e l&rsquo;altra, o finch&eacute; i dati non sono
+					attendibili. <strong>Non cancella nulla</strong>: stagioni, partite e classifiche
+					restano dove sono.
+				</p>
+				<?php submit_button( 'Salva', 'secondary', 'cpps_save_visibilita', false ); ?>
+			</form>
 			<p>Crea le stagioni (es. <code>2024/2025</code>) indicando <strong>categoria</strong> e <strong>girone</strong>. La stagione <strong>corrente</strong> è quella mostrata di default sul sito. Un numero d'ordine più alto compare prima.</p>
 			<table class="widefat striped" style="max-width:860px">
 				<thead><tr><th>Stagione</th><th>Categoria</th><th>Girone</th><th>Ordine</th><th>Corrente</th><th>Azioni</th></tr></thead>
@@ -1095,6 +1143,10 @@ JS;
 	}
 
 	public static function shortcode( $atts ) {
+		/* Spento dal pannello: non si stampa niente, nemmeno il titolo. Una
+		   sezione vuota con l'intestazione farebbe pensare a un guasto. */
+		if ( self::nascosta() ) { return ''; }
+
 		$seasons = self::seasons();
 		if ( empty( $seasons ) ) { return '<p class="cp-empty">Sezione in allestimento.</p>'; }
 
@@ -1142,10 +1194,12 @@ JS;
 	}
 
 	public static function sc_classifica( $atts ) {
+		if ( self::nascosta() ) { return ''; }
 		$season_id = self::resolve_season();
 		return self::css() . '<div class="cp-ps">' . self::render_classifica( $season_id ) . '</div>';
 	}
 	public static function sc_calendario( $atts ) {
+		if ( self::nascosta() ) { return ''; }
 		$season_id = self::resolve_season();
 		return self::css() . '<div class="cp-ps">' . self::render_calendario( $season_id ) . '</div>';
 	}
