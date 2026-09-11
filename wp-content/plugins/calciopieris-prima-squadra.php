@@ -834,7 +834,6 @@ class CP_Prima_Squadra {
 		.cp-cal .cp-teams{font-weight:600}
 		.cp-cal .cp-teams .cp-hl{color:var(--g)}
 		.cp-cal .cp-score{font-family:var(--font-display,inherit);font-size:1.25rem;font-weight:700;color:var(--g);white-space:nowrap}
-		.cp-cal .cp-score.cp-todo{font-size:.9rem;font-weight:600;color:#888}
 		.cp-empty{color:#777;font-style:italic}
 		.cp-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:220px;color:#777;font-style:italic}
 		.cp-spinner{width:20px;height:20px;border:2px solid #ddd;border-top-color:#901913;border-radius:50%;animation:cp-spin .8s linear infinite;flex:0 0 auto}
@@ -1192,11 +1191,13 @@ JS;
 		$when = $m->mdate ? date_i18n( 'D j M', strtotime( get_date_from_gmt( $m->mdate ) ) ) . '<br>' . date_i18n( 'H:i', strtotime( get_date_from_gmt( $m->mdate ) ) ) : 'Data da definire';
 		$comp = $m->competition ? '<div class="cp-when" style="margin-top:2px">' . esc_html( $m->competition ) . '</div>' : '';
 		$teams = self::hl( $m->home ) . ' <span style="color:#bbb">vs</span> ' . self::hl( $m->away );
-		if ( $played ) {
-			$score = '<span class="cp-score">' . intval( $m->home_goals ) . ' - ' . intval( $m->away_goals ) . '</span>';
-		} else {
-			$score = '<span class="cp-score cp-todo">da giocare</span>';
-		}
+		/* Per le partite ancora da giocare non si scrive niente al posto del
+		   risultato: stanno sotto il titolo "Prossime partite", quindi un
+		   "da giocare" accanto a ciascuna ripeterebbe una cosa gia' detta. */
+		$score = $played
+			? '<span class="cp-score">' . intval( $m->home_goals ) . ' - ' . intval( $m->away_goals ) . '</span>'
+			: '';
+
 		return '<li><div class="cp-when">' . $when . '</div><div class="cp-teams">' . $teams . $comp . '</div><div>' . $score . '</div></li>';
 	}
 
