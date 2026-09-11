@@ -3,7 +3,7 @@ Theme Name: Calcio Pieris 1925
 Theme URI: http://localhost/pieris
 Author: ASD Calcio Pieris 1925
 Description: Tema istituzionale granata e oro per ASD Calcio Pieris 1925. Font Barlow Condensed, layout pulito con box arrotondati e icone outline.
-Version: 1.6.5
+Version: 1.6.6
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -418,13 +418,14 @@ a:hover { color: var(--oro); }
 
 /* ---------- Staff tecnico ---------- */
 .staff-tecnico { margin: 44px 0; scroll-margin-top: 100px; }
-/* La Carta dei Diritti: un blocco a se', staccato da cio' che la precede e
-   dal richiamo finale, con l'ancoraggio per arrivarci da un link. */
-.carta-diritti { margin: 44px 0; scroll-margin-top: 100px; }
-/* Il paragrafo che spiega la qualifica FIGC: sta fra il titolo e la tabella e
-   va staccato da entrambi, o sembra una didascalia dell'intestazione. */
-.staff-tecnico .staff-intro { margin: 0 0 20px; max-width: 62em; color: #555; }
+/* Il blocco che spiega la qualifica FIGC e offre la Carta dei Diritti: sta fra
+   il titolo e la tabella dello staff, e va staccato da entrambi o sembra una
+   didascalia dell'intestazione. */
+.staff-tecnico .staff-intro { margin: 0 0 24px; max-width: 62em; color: #555; }
+.staff-tecnico .staff-intro p { margin: 0 0 12px; }
 .staff-tecnico .staff-intro strong { color: var(--granata); }
+/* il pulsante del documento chiude il blocco: un po' d'aria prima della tabella */
+.staff-tecnico .staff-intro .cp-doc-lista { margin-top: 16px; }
 .staff-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

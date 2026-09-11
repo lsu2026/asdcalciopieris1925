@@ -78,15 +78,30 @@ function cp_staff_tecnico_html( $group = 'prima' ) {
 	/* Il riconoscimento FIGC riguarda il settore giovanile, non la prima
 	   squadra: il paragrafo compare quindi solo nell'Attivita' di Base.
 	   Dice che cosa comporta davvero quella qualifica, perche' "Club di 1
-	   livello" da solo non significa niente per un genitore che legge. */
+	   livello" da solo non significa niente per un genitore che legge.
+
+	   Il documento da scaricare sta QUI, attaccato al paragrafo che lo
+	   nomina: fra i requisiti del 1 livello c'e' proprio l'impegno a
+	   divulgare la Carta, e metterla in fondo alla pagina, staccata dal
+	   motivo per cui la si pubblica, l'avrebbe fatta sembrare un allegato
+	   qualunque. */
 	if ( 'giovanile' === $group ) {
-		$h .= '<p class="staff-intro">L&rsquo;A.S.D. Calcio Pieris 1925 &egrave; riconosciuta dalla FIGC come '
+		$h .= '<div class="staff-intro">';
+		$h .= '<p>L&rsquo;A.S.D. Calcio Pieris 1925 &egrave; riconosciuta dalla FIGC come '
 			. '<strong>Club di 1&deg; livello</strong> nel Sistema di Qualifica dei Club del Settore Giovanile e Scolastico. '
 			. 'Non &egrave; un titolo di facciata: comporta un responsabile del settore giovanile e un responsabile tecnico '
-			. 'con qualifica federale, istruttori qualificati con un rapporto di un allenatore ogni quindici bambini nelle '
-			. 'categorie di base, un impianto idoneo con defibrillatore e personale formato al suo uso, e l&rsquo;impegno a '
-			. 'divulgare la Carta dei Diritti dei Ragazzi fra atleti, tecnici, dirigenti e genitori. '
-			. 'Le qualifiche che leggete qui sotto sono parte di quel riconoscimento.</p>';
+			. 'con qualifica federale, istruttori qualificati &mdash; quelli che trovate qui sotto &mdash; con un rapporto di '
+			. 'un allenatore ogni quindici bambini nelle categorie di base, un impianto idoneo con defibrillatore e personale '
+			. 'formato al suo uso, e l&rsquo;impegno a divulgare la <strong>Carta dei Diritti dei Ragazzi</strong> fra atleti, '
+			. 'tecnici, dirigenti e genitori.</p>';
+		$h .= '<p>Quella Carta apre il <strong>Comunicato Ufficiale n.&nbsp;1 del Settore Giovanile e Scolastico</strong>, il '
+			. 'documento con cui la FIGC regola l&rsquo;attivit&agrave; giovanile della stagione: dal diritto di divertirsi e '
+			. 'giocare fino al diritto di non essere un campione, e i doveri che da quei diritti discendono per gli adulti. '
+			. 'Lo trovate qui, e vi invitiamo a leggerlo.</p>';
+		if ( shortcode_exists( 'documenti' ) ) {
+			$h .= do_shortcode( '[documenti area="attivita-di-base"]' );
+		}
+		$h .= '</div>';
 	}
 
 	$h .= '<table><thead><tr><th>Riferimenti</th><th>Nome</th></tr></thead><tbody>';
