@@ -74,8 +74,12 @@ class CP_Sponsors {
 				// salvo relativo a wp-content, cosi' il dato non dipende dal dominio
 				if ( function_exists( 'cp_asset_relative' ) ) { $logo = cp_asset_relative( $logo ); }
 				$en   = empty( $row['enabled'] ) ? 0 : 1;
+				/* La descrizione e' testo semplice: niente tag, nemmeno quelli
+				   innocui. Finisce in una pagina pubblica e chi la scrive non
+				   deve doversi preoccupare di cosa e' permesso. */
+				$desc = isset( $row['desc'] ) ? sanitize_textarea_field( $row['desc'] ) : '';
 				if ( '' === $name && '' === $logo ) { continue; }
-				$out[] = array( 'name' => $name, 'url' => $url, 'logo' => $logo, 'enabled' => $en );
+				$out[] = array( 'name' => $name, 'url' => $url, 'logo' => $logo, 'desc' => $desc, 'enabled' => $en );
 			}
 		}
 		update_option( self::OPT, $out );
@@ -106,7 +110,7 @@ class CP_Sponsors {
 			</form>
 		</div>
 
-		<template id="cpsp-tpl"><?php self::render_row( '__I__', array( 'name' => '', 'url' => '', 'logo' => '' ) ); ?></template>
+		<template id="cpsp-tpl"><?php self::render_row( '__I__', array( 'name' => '', 'url' => '', 'logo' => '', 'desc' => '' ) ); ?></template>
 
 		<style>
 			.cpsp-row{display:flex;gap:16px;align-items:flex-start;background:#fff;border:1px solid #ccd0d4;border-radius:8px;padding:14px 16px;margin:0 0 14px}
@@ -118,6 +122,7 @@ class CP_Sponsors {
 			.cpsp-noimg{height:80px;display:flex;align-items:center;justify-content:center;color:#999;border:1px dashed #ccc;border-radius:6px;margin-bottom:8px;font-size:12px}
 			.cpsp-fields{flex:1;display:flex;flex-direction:column;gap:8px}
 			.cpsp-fields input[type=text],.cpsp-fields input[type=url]{width:100%}
+			.cpsp-fields textarea{width:100%;resize:vertical;font-size:13px;line-height:1.5}
 			.cpsp-toggle{font-size:13px;color:#333}
 			.cpsp-del{color:#b32d2e;background:none;border:none;cursor:pointer;font-size:13px;align-self:center}
 			.cpsp-row.cpsp-off{opacity:.5}
@@ -183,6 +188,7 @@ class CP_Sponsors {
 		$name = isset( $sp['name'] ) ? $sp['name'] : '';
 		$url  = isset( $sp['url'] ) ? $sp['url'] : '';
 		$logo = isset( $sp['logo'] ) ? $sp['logo'] : '';
+		$desc = isset( $sp['desc'] ) ? $sp['desc'] : '';
 		if ( '' !== $logo && function_exists( 'cp_asset_url' ) ) { $logo = cp_asset_url( $logo ); }
 		$en   = ! isset( $sp['enabled'] ) || ! empty( $sp['enabled'] );
 		$has  = ( '' !== $logo );
@@ -199,6 +205,7 @@ class CP_Sponsors {
 			<div class="cpsp-fields">
 				<input type="text" name="sp[<?php echo esc_attr( $i ); ?>][name]" value="<?php echo esc_attr( $name ); ?>" placeholder="Nome sponsor">
 				<input type="url" name="sp[<?php echo esc_attr( $i ); ?>][url]" value="<?php echo esc_attr( $url ); ?>" placeholder="https://sito-sponsor.it (facoltativo)">
+				<textarea name="sp[<?php echo esc_attr( $i ); ?>][desc]" rows="3" placeholder="Due righe su chi e' e cosa fa: compaiono nella pagina Sponsors accanto al logo (facoltativo)"><?php echo esc_textarea( $desc ); ?></textarea>
 				<label class="cpsp-toggle"><input type="checkbox" class="cpsp-enabled" name="sp[<?php echo esc_attr( $i ); ?>][enabled]" value="1" <?php checked( $en ); ?>> <strong>Attivo</strong> (mostrato sul sito)</label>
 			</div>
 			<button type="button" class="cpsp-del" title="Elimina sponsor">&times; Elimina</button>

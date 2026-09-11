@@ -2,7 +2,9 @@
 /**
  * Template della pagina "Sponsors" — un blocco per sponsor con immagine e descrizione
  * affiancate, alternando i lati (testo/immagine) ad ogni riga.
- * Testi provvisori (lorem ipsum) in attesa delle informazioni ufficiali.
+ * La descrizione di ciascuno arriva dal pannello Sponsor. Chi non ce l'ha
+ * ancora mostra soltanto nome, logo e collegamento: meglio una scheda breve
+ * di un testo finto che nessuno ha scritto.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 get_header();
@@ -17,7 +19,6 @@ $sponsors = function_exists( 'cp_get_sponsors' ) ? cp_get_sponsors() : array(
 	array( 'name' => 'BCC Venezia Giulia', 'url' => 'https://www.bccveneziagiulia.it/', 'logo' => $dir . 'bcc.webp' ),
 	array( 'name' => 'Eye Store',          'url' => 'https://www.eyesportshop.com/it/', 'logo' => $dir . 'eyestore.jpg' ),
 );
-$lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
 ?>
 <style>
 .sponsors-page{--g:var(--granata,#901913);--o:var(--oro,#d6aa63)}
@@ -28,7 +29,6 @@ $lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmo
 .sp-row__text h2{color:var(--g);font-size:1.7rem;margin:0 0 14px}
 .sp-row__text h2 a{color:inherit;text-decoration:none}
 .sp-row__text p{color:#444;line-height:1.75;margin:0 0 18px}
-.sp-badge{display:inline-block;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;color:#9a7b1f;background:#faf3e2;border:1px solid #ecdfbe;padding:3px 9px;border-radius:5px;margin-bottom:12px}
 .sp-link{display:inline-block;color:var(--g);font-weight:600;text-decoration:none;border-bottom:2px solid var(--o);padding-bottom:2px}
 .sp-row__img{flex:1 1 300px;display:flex;justify-content:center;align-items:center;background:#fff;border:1px solid #ececec;border-radius:14px;padding:34px;min-height:190px;box-shadow:0 3px 14px rgba(0,0,0,.07)}
 .sp-row__img img{max-width:100%;max-height:150px;object-fit:contain}
@@ -65,9 +65,10 @@ $lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmo
 			?>
 			<div class="sp-row<?php echo $rev; ?>">
 				<div class="sp-row__text">
-					<span class="sp-badge">Testo provvisorio</span>
 					<h2><?php if ( $sp['url'] ) : ?><a href="<?php echo esc_url( $sp['url'] ); ?>" target="_blank" rel="noopener"><?php echo $name; ?></a><?php else : echo $name; endif; ?></h2>
-					<p><?php echo esc_html( $lorem ); ?></p>
+					<?php if ( ! empty( $sp['desc'] ) ) : ?>
+					<p><?php echo esc_html( $sp['desc'] ); ?></p>
+					<?php endif; ?>
 					<?php if ( $sp['url'] ) : ?>
 						<a class="sp-link" href="<?php echo esc_url( $sp['url'] ); ?>" target="_blank" rel="noopener">Visita il sito &rarr;</a>
 					<?php endif; ?>
