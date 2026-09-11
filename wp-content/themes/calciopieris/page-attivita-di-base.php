@@ -67,14 +67,7 @@ $categorie = array(
 		<?php endforeach; ?>
 	</div>
 
-	<section class="prova-cta" id="vuoi-giocare">
-			<h2>Vuoi iniziare a giocare?</h2>
-			<p><strong>Vieni a provare un allenamento gratuito e senza impegno!</strong> Ti aspettiamo al campo sportivo di <strong>Via Anna Frank a Pieris</strong> <strong>ogni marted&igrave; e gioved&igrave;, dalle 17:00 alle 18:30</strong>. Porta scarpe da ginnastica (o da calcio) e tanta voglia di divertirti: i nostri istruttori ti accoglieranno e ti faranno entrare subito in gioco.</p>
-			<p>Le iscrizioni sono aperte tutto l&rsquo;anno. Per informazioni scrivici dalla pagina <a href="<?php echo esc_url( home_url( '/contatti/' ) ); ?>">Contatti</a> o passa direttamente al campo negli orari di prova.</p>
-			<a class="btn btn-granata" href="<?php echo esc_url( home_url( '/contatti/' ) ); ?>">Contattaci</a>
-		</section>
-
-		<?php echo cp_staff_tecnico_html( 'giovanile' ); ?>
+<?php echo cp_staff_tecnico_html( 'giovanile' ); ?>
 
 		<h2>Cosa offriamo</h2>
 	<p>Un percorso serio e completo, pensato per far crescere ogni ragazzo come persona e come atleta.</p>
@@ -120,6 +113,16 @@ $categorie = array(
 		</div>
 		<?php endforeach; ?>
 	</div>
+
+	<?php /* Il richiamo a venire a provare chiude la pagina: arriva dopo che
+	   si e' letto che cosa offriamo, non prima. L'ancora e' la stessa di
+	   sempre, cosi' i pulsanti della home continuano a portare qui. */ ?>
+	<section class="prova-cta" id="vuoi-giocare">
+		<h2>Vuoi iniziare a giocare?</h2>
+		<p><strong>Vieni a provare un allenamento gratuito e senza impegno!</strong> Ti aspettiamo al campo sportivo di <strong>Via Anna Frank a Pieris</strong> <strong>ogni marted&igrave; e gioved&igrave;, dalle 17:00 alle 18:30</strong>. Porta scarpe da ginnastica (o da calcio) e tanta voglia di divertirti: i nostri istruttori ti accoglieranno e ti faranno entrare subito in gioco.</p>
+		<p>Le iscrizioni sono aperte tutto l&rsquo;anno. Per informazioni scrivici dalla pagina <a href="<?php echo esc_url( home_url( '/contatti/' ) ); ?>">Contatti</a> o passa direttamente al campo negli orari di prova.</p>
+		<a class="btn btn-granata" href="<?php echo esc_url( home_url( '/contatti/' ) ); ?>">Contattaci</a>
+	</section>
 
 </div>
 
