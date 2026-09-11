@@ -30,8 +30,46 @@ class CP_Prima_Squadra {
 	 */
 	const OPT_NASCONDI = 'cpps_nascondi';
 
+	/**
+	 * Due interruttori piu' fini, dentro il blocco.
+	 *
+	 * Capita spesso che una delle due meta' sia pronta e l'altra no: il
+	 * calendario esce prima che la classifica abbia senso, e in coppa la
+	 * classifica puo' non esistere affatto. Poter spegnere solo una delle due
+	 * evita di dover nascondere tutto per colpa di meta' dei dati.
+	 *
+	 * Valgono solo a blocco acceso: se e' spento quello generale, qui non c'e'
+	 * piu' niente da nascondere.
+	 */
+	const OPT_NASCONDI_CLASSIFICA = 'cpps_nascondi_classifica';
+	const OPT_NASCONDI_PARTITE    = 'cpps_nascondi_partite';
+
 	public static function nascosta() {
 		return (bool) get_option( self::OPT_NASCONDI, 0 );
+	}
+
+	public static function nascosta_classifica() {
+		return (bool) get_option( self::OPT_NASCONDI_CLASSIFICA, 0 );
+	}
+
+	public static function nascoste_partite() {
+		return (bool) get_option( self::OPT_NASCONDI_PARTITE, 0 );
+	}
+
+	/**
+	 * Resta qualcosa da mostrare?
+	 *
+	 * Spegnendo sia la classifica sia le partite del blocco resterebbero solo
+	 * le foto delle stagioni. Se nemmeno quelle ci sono, si tornerebbe a un
+	 * carosello vuoto con il suo titolo: l'aria di un guasto. In quel caso
+	 * meglio non aprire il blocco affatto.
+	 */
+	public static function c_e_qualcosa( $seasons ) {
+		if ( ! self::nascosta_classifica() || ! self::nascoste_partite() ) { return true; }
+		foreach ( (array) $seasons as $s ) {
+			if ( ! empty( $s->photo ) ) { return true; }
+		}
+		return false;
 	}
 
 	public static function init() {
@@ -415,9 +453,9 @@ class CP_Prima_Squadra {
 		   e una svista qui non puo' toccare i dati delle stagioni. */
 		if ( isset( $_POST['cpps_save_visibilita'] ) && check_admin_referer( 'cpps_visibilita' ) ) {
 			update_option( self::OPT_NASCONDI, empty( $_POST['cpps_nascondi'] ) ? 0 : 1 );
-			self::notice( self::nascosta()
-				? 'Sezione nascosta: sul sito non compare piu\'.'
-				: 'Sezione di nuovo visibile sul sito.' );
+			update_option( self::OPT_NASCONDI_CLASSIFICA, empty( $_POST['cpps_nascondi_classifica'] ) ? 0 : 1 );
+			update_option( self::OPT_NASCONDI_PARTITE, empty( $_POST['cpps_nascondi_partite'] ) ? 0 : 1 );
+			self::notice( 'Visibilit&agrave; aggiornata.' );
 		}
 
 		$edit = null;
@@ -427,23 +465,56 @@ class CP_Prima_Squadra {
 		<div class="wrap">
 			<h1>Stagioni</h1>
 
-			<?php if ( self::nascosta() ) : ?>
+			<?php
+			/* L'avviso dice che cosa NON si vede, e sceglie le parole in base a
+			   com'e' messo l'interruttore generale: a blocco spento le altre due
+			   caselle non hanno alcun effetto, e scriverne li' sarebbe fuorviante. */
+			$cp_avviso = '';
+			if ( self::nascosta() ) {
+				$cp_avviso = 'La sezione &ldquo;Classifica e risultati&rdquo; non compare sul sito.';
+			} elseif ( self::nascosta_classifica() && self::nascoste_partite() ) {
+				$cp_avviso = 'Sul sito restano solo le foto delle stagioni: classifiche e partite sono nascoste.';
+			} elseif ( self::nascosta_classifica() ) {
+				$cp_avviso = 'Sul sito si vedono le partite, ma non le classifiche.';
+			} elseif ( self::nascoste_partite() ) {
+				$cp_avviso = 'Sul sito si vedono le classifiche, ma non le partite.';
+			}
+			if ( $cp_avviso ) :
+			?>
 			<div class="notice notice-warning" style="margin:12px 0">
-				<p><strong>La sezione &ldquo;Classifica e risultati&rdquo; non compare sul sito.</strong>
-				I dati qui sotto restano al loro posto: torna visibile togliendo la spunta.</p>
+				<p><strong><?php echo wp_kses_post( $cp_avviso ); ?></strong>
+				I dati restano al loro posto: tornano visibili togliendo le spunte.</p>
 			</div>
 			<?php endif; ?>
 
-			<form method="post" style="background:#fff;border:1px solid #c3c4c7;border-left-width:4px;border-left-color:#72aee6;padding:10px 14px;margin:0 0 22px;max-width:860px">
+			<form method="post" style="background:#fff;border:1px solid #c3c4c7;border-left-width:4px;border-left-color:#72aee6;padding:12px 14px;margin:0 0 22px;max-width:860px">
 				<?php wp_nonce_field( 'cpps_visibilita' ); ?>
-				<label style="font-weight:600">
+
+				<p style="margin:0 0 4px"><label style="font-weight:600">
 					<input type="checkbox" name="cpps_nascondi" value="1" <?php checked( self::nascosta() ); ?>>
-					Nascondi dal sito l&rsquo;intera sezione &ldquo;Classifica e risultati&rdquo;
-				</label>
-				<p class="description" style="margin:6px 0 10px">
-					Toglie dalle pagine tutto il blocco: il carosello delle stagioni, le classifiche e i
-					calendari. Utile fra una stagione e l&rsquo;altra, o finch&eacute; i dati non sono
-					attendibili. <strong>Non cancella nulla</strong>: stagioni, partite e classifiche
+					Nascondi l&rsquo;intera sezione &ldquo;Classifica e risultati&rdquo;
+				</label></p>
+				<p class="description" style="margin:0 0 14px">
+					Toglie dal sito tutto il blocco: carosello delle stagioni, classifiche e partite.
+				</p>
+
+				<p style="margin:0 0 4px"><label>
+					<input type="checkbox" name="cpps_nascondi_classifica" value="1" <?php checked( self::nascosta_classifica() ); ?>>
+					Nascondi le <strong>classifiche</strong>
+				</label></p>
+				<p style="margin:0 0 4px"><label>
+					<input type="checkbox" name="cpps_nascondi_partite" value="1" <?php checked( self::nascoste_partite() ); ?>>
+					Nascondi le <strong>partite</strong> (risultati e prossimi incontri)
+				</label></p>
+				<p class="description" style="margin:4px 0 12px">
+					Queste due valgono <em>dentro</em> la sezione, e servono quando una met&agrave; dei dati
+					&egrave; pronta e l&rsquo;altra no. Se la sezione intera &egrave; nascosta non hanno
+					effetto. Spegnendole entrambe restano le sole foto delle stagioni; senza nemmeno
+					quelle, la sezione non compare.
+				</p>
+
+				<p class="description" style="margin:0 0 10px">
+					<strong>Nessuna di queste cancella niente</strong>: stagioni, partite e classifiche
 					restano dove sono.
 				</p>
 				<?php submit_button( 'Salva', 'secondary', 'cpps_save_visibilita', false ); ?>
@@ -1015,8 +1086,17 @@ JS;
 	public static function render_season_body( $s ) {
 		$out = self::render_photo( $s );
 
+		$mostra_classifica = ! self::nascosta_classifica();
+		$mostra_partite    = ! self::nascoste_partite();
+
+		/* Spente entrambe resta la sola foto della stagione: niente schede di
+		   competizione, che sarebbero linguette su pannelli vuoti. */
+		if ( ! $mostra_classifica && ! $mostra_partite ) { return $out; }
+
 		if ( ! self::has_coppa( $s->id ) ) {
-			return $out . self::render_classifica( $s->id ) . self::render_calendario( $s->id );
+			if ( $mostra_classifica ) { $out .= self::render_classifica( $s->id ); }
+			if ( $mostra_partite ) { $out .= self::render_calendario( $s->id ); }
+			return $out;
 		}
 
 		$comps = array( self::CAMPIONATO, self::COPPA );
@@ -1041,10 +1121,12 @@ JS;
 			/* Nella coppa la classifica si mostra solo se esiste davvero: molte coppe
 			   si giocano a eliminazione diretta, e una tabella vuota farebbe pensare a
 			   dati mancanti invece che a una competizione senza girone. */
-			if ( self::CAMPIONATO === $c || self::standings( $s->id, $c ) ) {
+			if ( $mostra_classifica && ( self::CAMPIONATO === $c || self::standings( $s->id, $c ) ) ) {
 				$out .= self::render_classifica( $s->id, $c );
 			}
-			$out .= self::render_calendario( $s->id, $c );
+			if ( $mostra_partite ) {
+				$out .= self::render_calendario( $s->id, $c );
+			}
 			$out .= '</div>';
 		}
 		return $out;
@@ -1150,6 +1232,10 @@ JS;
 		$seasons = self::seasons();
 		if ( empty( $seasons ) ) { return '<p class="cp-empty">Sezione in allestimento.</p>'; }
 
+		/* Classifica e partite spente entrambe, e nessuna foto di stagione: non
+		   resterebbe niente dentro il carosello. */
+		if ( ! self::c_e_qualcosa( $seasons ) ) { return ''; }
+
 		$current = self::resolve_season();
 		$ids     = array();
 		foreach ( $seasons as $s ) { $ids[] = intval( $s->id ); }
@@ -1194,12 +1280,12 @@ JS;
 	}
 
 	public static function sc_classifica( $atts ) {
-		if ( self::nascosta() ) { return ''; }
+		if ( self::nascosta() || self::nascosta_classifica() ) { return ''; }
 		$season_id = self::resolve_season();
 		return self::css() . '<div class="cp-ps">' . self::render_classifica( $season_id ) . '</div>';
 	}
 	public static function sc_calendario( $atts ) {
-		if ( self::nascosta() ) { return ''; }
+		if ( self::nascosta() || self::nascoste_partite() ) { return ''; }
 		$season_id = self::resolve_season();
 		return self::css() . '<div class="cp-ps">' . self::render_calendario( $season_id ) . '</div>';
 	}
