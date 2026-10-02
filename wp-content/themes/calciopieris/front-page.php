@@ -155,10 +155,18 @@ get_header();
 
    Prima si provano i post presi da soli dalla Pagina Facebook - sono quelli che
    si aggiornano senza che nessuno ci metta mano - e solo se non ce ne sono si
-   ripiega sulle news scritte a mano. */
-$cp_news_html = function_exists( 'cp_post_facebook_in_home' ) ? cp_post_facebook_in_home() : '';
+   ripiega sulle news scritte a mano.
 
-if ( ! $cp_news_html ) {
+   Se pero' le news sono state spente dal pannello, non si ripiega su niente:
+   si salta tutto il blocco. Ripiegare vorrebbe dire rispondere a "non voglio
+   vedere le news" con delle news piu' vecchie. */
+$cp_news_accese = ! function_exists( 'cp_news_in_home_attive' ) || cp_news_in_home_attive();
+
+$cp_news_html = ( $cp_news_accese && function_exists( 'cp_post_facebook_in_home' ) )
+	? cp_post_facebook_in_home()
+	: '';
+
+if ( $cp_news_accese && ! $cp_news_html ) {
 	$cp_news = new WP_Query( array( 'posts_per_page' => 6, 'ignore_sticky_posts' => true ) );
 	if ( $cp_news->have_posts() ) {
 		ob_start();

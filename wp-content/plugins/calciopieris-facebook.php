@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Post da Facebook
  * Description: Ci si collega con l'utenza Facebook che amministra la Pagina, si sceglie la Pagina e da quel momento il sito scarica da solo gli ultimi post, foto comprese, e li mostra con la stessa veste delle news. Nasce per sostituire Smash Balloon, che sull'hosting del sito non puo' girare.
- * Version: 1.4
+ * Version: 1.5
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -1202,10 +1202,10 @@ class CP_Facebook {
 				         cercare il guasto nello scarico - che invece sta funzionando. */ ?>
 				<div class="notice notice-warning inline">
 					<p>
-						<strong>In questo momento i post non si vedono in home.</strong>
-						Continuano ad arrivare e ad aggiornarsi; a tenerli nascosti &egrave;
-						la casella <em>Mostra i post di Facebook nella home</em>, qui sotto
-						fra le impostazioni.
+						<strong>In questo momento la home non mostra nessuna news.</strong>
+						I post continuano ad arrivare e ad aggiornarsi; a tenere nascosta
+						l&rsquo;intera sezione &egrave; la casella <em>Mostra le news nella
+						home</em>, qui sotto fra le impostazioni.
 					</p>
 				</div>
 			<?php endif; ?>
@@ -1396,13 +1396,13 @@ class CP_Facebook {
 							<label for="cpfb-in-home-attivo">
 								<input name="in_home_attivo" id="cpfb-in-home-attivo" type="checkbox" value="1"
 									<?php checked( ! empty( $conf['in_home_attivo'] ) ); ?>>
-								Mostra i post di Facebook nella home
+								Mostra le news nella home
 							</label>
 							<p class="description">
-								Togliendo la spunta i post restano qui e continuano ad aggiornarsi,
-								ma in home non si vedono. La sezione <em>News dal Pieris</em> torna
-								allora a mostrare gli articoli scritti a mano, e se non ce ne sono
-								sparisce del tutto.
+								Togliendo la spunta la sezione <em>News dal Pieris</em> sparisce dalla
+								home: n&eacute; i post di Facebook n&eacute; gli articoli scritti a
+								mano. I post intanto restano qui e continuano ad aggiornarsi, cos&igrave;
+								rimettendo la spunta si ritrovano freschi e non fermi a oggi.
 							</p>
 						</td>
 					</tr>
@@ -1475,10 +1475,30 @@ function cp_post_facebook( $quanti = 0 ) {
 /** Quanti post vuole la home, secondo il pannello. */
 function cp_post_facebook_in_home() {
 	if ( ! class_exists( 'CP_Facebook' ) ) { return ''; }
+	if ( ! cp_news_in_home_attive() ) { return ''; }
 	$c = CP_Facebook::conf();
-	/* Spento dal pannello: la home non ne sa niente. Si risponde come quando
-	   non c'e' nessun post, cosi' il tema fa quello che ha sempre fatto in
-	   quel caso invece di dover imparare un terzo stato. */
-	if ( empty( $c['in_home_attivo'] ) ) { return ''; }
 	return CP_Facebook::schede( (int) $c['in_home'] );
+}
+
+/**
+ * La sezione News della home e' accesa?
+ *
+ * Nasce da un difetto vero. La prima versione si limitava a non dare i post
+ * alla home: il tema, non vedendone, faceva quello che faceva da sempre e
+ * ripiegava sugli articoli scritti a mano. Dove quegli articoli non ci sono -
+ * in locale - sembrava funzionare; in certificazione, dove ci sono ancora,
+ * spegnere l'interruttore faceva ricomparire sei vecchie notizie al posto dei
+ * post di Facebook. Chi aveva chiesto di non vedere le news se le ritrovava
+ * davanti, solo piu' vecchie.
+ *
+ * Il tema deve quindi saper distinguere "non ci sono post" da "le news sono
+ * spente", e questo e' il modo in cui glielo si dice.
+ *
+ * Senza il plugin la risposta e' si': un tema a cui manchi questo plugin deve
+ * continuare a mostrare le sue news come ha sempre fatto.
+ */
+function cp_news_in_home_attive() {
+	if ( ! class_exists( 'CP_Facebook' ) ) { return true; }
+	$c = CP_Facebook::conf();
+	return ! empty( $c['in_home_attivo'] );
 }
