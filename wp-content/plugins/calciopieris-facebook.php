@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Calcio Pieris – Post da Facebook
  * Description: Ci si collega con l'utenza Facebook che amministra la Pagina, si sceglie la Pagina e da quel momento il sito scarica da solo gli ultimi post, foto comprese, e li mostra con la stessa veste delle news. Nasce per sostituire Smash Balloon, che sull'hosting del sito non puo' girare.
- * Version: 1.3
+ * Version: 1.4
  * Author: A.S.D. Calcio Pieris 1925
  */
 
@@ -272,6 +272,12 @@ class CP_Facebook {
 			'nome_pagina' => '',
 			'quanti'      => 12,
 			'in_home'     => 5,
+			/* Interruttore del solo lato visibile: acceso di nascita, perche'
+			   chi collega una Pagina lo fa per vederne i post. Spegnerlo non
+			   ferma lo scarico - i post continuano ad arrivare e restano qui,
+			   cosi' riaccendendolo si ritrovano aggiornati e non vecchi di
+			   quando lo si era spento. */
+			'in_home_attivo' => 1,
 			'cadenza'     => 'cp_fb_5min',
 		) );
 	}
@@ -1127,6 +1133,11 @@ class CP_Facebook {
 		$conf['quanti']  = max( 1, min( 50, (int) $_POST['quanti'] ) );
 		$conf['in_home'] = max( 1, min( 20, (int) $_POST['in_home'] ) );
 
+		/* Una casella non spuntata non viene mandata affatto dal browser:
+		   l'assenza vale spento, ed e' il motivo per cui si guarda $_POST con
+		   empty() invece di leggerne il valore. */
+		$conf['in_home_attivo'] = empty( $_POST['in_home_attivo'] ) ? 0 : 1;
+
 		$scelta  = isset( $_POST['cadenza'] ) ? sanitize_key( wp_unslash( $_POST['cadenza'] ) ) : '';
 		$cadenze = self::cadenze();
 		if ( isset( $cadenze[ $scelta ] ) ) { $conf['cadenza'] = $scelta; }
@@ -1185,6 +1196,19 @@ class CP_Facebook {
 				ne scarica anche le foto, tenendone una copia qui. I post compaiono in home
 				fra le news, con la stessa veste.
 			</p>
+
+			<?php if ( $collegato && empty( $conf['in_home_attivo'] ) ) : ?>
+				<?php /* Avviso in cima: altrimenti, vedendo la home vuota, si va a
+				         cercare il guasto nello scarico - che invece sta funzionando. */ ?>
+				<div class="notice notice-warning inline">
+					<p>
+						<strong>In questo momento i post non si vedono in home.</strong>
+						Continuano ad arrivare e ad aggiornarsi; a tenerli nascosti &egrave;
+						la casella <em>Mostra i post di Facebook nella home</em>, qui sotto
+						fra le impostazioni.
+					</p>
+				</div>
+			<?php endif; ?>
 
 			<h2>1. L&rsquo;applicazione Facebook</h2>
 			<p class="description" style="max-width:62em">
@@ -1367,6 +1391,22 @@ class CP_Facebook {
 						<td><input name="quanti" id="cpfb-quanti" type="number" min="1" max="50" value="<?php echo (int) $conf['quanti']; ?>"></td>
 					</tr>
 					<tr>
+						<th scope="row">In home</th>
+						<td>
+							<label for="cpfb-in-home-attivo">
+								<input name="in_home_attivo" id="cpfb-in-home-attivo" type="checkbox" value="1"
+									<?php checked( ! empty( $conf['in_home_attivo'] ) ); ?>>
+								Mostra i post di Facebook nella home
+							</label>
+							<p class="description">
+								Togliendo la spunta i post restano qui e continuano ad aggiornarsi,
+								ma in home non si vedono. La sezione <em>News dal Pieris</em> torna
+								allora a mostrare gli articoli scritti a mano, e se non ce ne sono
+								sparisce del tutto.
+							</p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="cpfb-home">Quanti mostrarne in home</label></th>
 						<td><input name="in_home" id="cpfb-home" type="number" min="1" max="20" value="<?php echo (int) $conf['in_home']; ?>"></td>
 					</tr>
@@ -1436,5 +1476,9 @@ function cp_post_facebook( $quanti = 0 ) {
 function cp_post_facebook_in_home() {
 	if ( ! class_exists( 'CP_Facebook' ) ) { return ''; }
 	$c = CP_Facebook::conf();
+	/* Spento dal pannello: la home non ne sa niente. Si risponde come quando
+	   non c'e' nessun post, cosi' il tema fa quello che ha sempre fatto in
+	   quel caso invece di dover imparare un terzo stato. */
+	if ( empty( $c['in_home_attivo'] ) ) { return ''; }
 	return CP_Facebook::schede( (int) $c['in_home'] );
 }
